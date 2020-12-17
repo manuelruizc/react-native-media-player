@@ -11,6 +11,10 @@ class DownloadNewSong extends Component {
         }
     }
 
+    componentDidMount() {
+        console.log("HELOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+    }
+
     closeModal = () => {
         this.props.closeModal();
     }
@@ -25,7 +29,7 @@ class DownloadNewSong extends Component {
     render() { 
         return (
             <Modal closeModal={this.closeModal}>
-                <View style={{width:'90%', height:'60%', backgroundColor:'white', borderRadius:13, zIndex: 4, justifyContent: 'center', alignItems: 'center',}}>
+                <View style={{width:'90%', height:'60%', backgroundColor:'white', borderRadius:13, zIndex: 100000000, justifyContent: 'center', alignItems: 'center',}}>
                     <Image source={{uri: "https://s3-eu-west-1.amazonaws.com/malikafavre/project_thumbnails/Leftovers_thumbnail.png?mtime=1433248579"}} resizeMode={"cover"} style={{width:40, height:40, borderRadius:900, marginBottom:15}} />
                     <View style={{width:'80%', height:'35%', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20}}>
                         <TextInput onChangeText={(text) => this.setState({currentSong: text})}

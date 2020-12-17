@@ -12,14 +12,14 @@ class Modal extends Component {
     componentDidMount() {
         Animated.timing(this.animated_value, {
             toValue: 1,
-            duration: 670,
+            duration: 450,
         }).start();
     }
 
     closeModal = () => {
         Animated.timing(this.animated_value, {
             toValue: 0,
-            duration: 670,
+            duration: 450,
         }).start(() => {
             this.props.closeModal();
         });
@@ -38,13 +38,13 @@ class Modal extends Component {
 
         return (
         <Animated.View
-            style={{zIndex: 2, width: '100%', height: '100%', backgroundColor:'rgba(0,0,0,0.75)',
+            style={{zIndex: 10, width: '100%', height: '100%', backgroundColor:'rgba(0,0,0,0.75)',
             position:'absolute', top:0, left:0,}}
         >
             <TouchableWithoutFeedback onPress={this.closeModal}>
-                <View style={{width:'100%', height: '100%', position:'absolute', top: 0, left:0, zIndex: 3}}></View>
+                <View style={{width:'100%', height: '100%', position:'absolute', top: 0, left:0, zIndex: 0}}></View>
             </TouchableWithoutFeedback>
-            <Animated.View style={{justifyContent: 'center', alignItems: 'center', width:'100%', height:'100%', transform:[{translateY}]}}>
+            <Animated.View style={{justifyContent: 'center', zIndex: 100000000, alignItems: 'center', width:'100%', height:'100%', transform:[{translateY}]}}>
                 {this.props.children}
             </Animated.View>
         </Animated.View>

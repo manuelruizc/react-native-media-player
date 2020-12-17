@@ -84,21 +84,23 @@ export default class SplashScreen extends Component {
     });
     const scale = this.state.item_animation.interpolate({
       inputRange: [0, 1, 2],
-      outputRange: [0.6, 1.2, 20],
+      outputRange: [0.6, 1.2, 100],
       extrapolate: 'clamp',
     });
-    const transform = [{scale}]
+    const translateY = this.state.item_animation.interpolate({
+      inputRange:[0, 1, 2],
+      outputRange: [-width*0.1, -width*0.1, 0]
+    })
+    const transform = [{scale}, {translateY}]
     const container_styles = { transform: [ { rotate } ] }
-
-    const backgroundColor = '#4B4BFA';
     
     return(
       <View style={styles.container}>
         <Animated.View style={[styles.animation_container, container_styles]}>
           <Animated.View
-          style={{width: width*0.20, height: width*0.20,borderRadius:width, backgroundColor,
-          position:'absolute', top: 0, left: (width*0.35) - (width*0.20/2), transform}} />
-          <Animated.View
+          style={{width: width*0.20, height: width*0.20,borderRadius:width, backgroundColor:'#ea4c89',
+          transform}} />
+          {/* <Animated.View
           style={{width: width*0.20, height: width*0.20,borderRadius:width, backgroundColor,
           position:'absolute', bottom: 0, left: (width*0.35) - (width*0.20/2), transform}} />
           <Animated.View
@@ -106,7 +108,7 @@ export default class SplashScreen extends Component {
           position:'absolute', left: 0, top: (width*0.35) - (width*0.20/2), transform}} />
           <Animated.View
           style={{width: width*0.20, height: width*0.20,borderRadius:width, backgroundColor,
-          position:'absolute', right: 0, top: (width*0.35) - (width*0.20/2), transform}} />
+          position:'absolute', right: 0, top: (width*0.35) - (width*0.20/2), transform}} /> */}
         </Animated.View>
       </View>
     );
@@ -121,11 +123,13 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'black'
+    backgroundColor: '#00C49D'
   },
   animation_container: {
     width: width*0.7,
     height: width*0.7,
+    justifyContent: 'center',
+    alignItems:'center',
     // borderRadius: width,
     // backgroundColor: 'lightgreen',
     position:'relative',

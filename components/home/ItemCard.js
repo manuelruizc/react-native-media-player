@@ -1,6 +1,9 @@
 import React, { Component } from 'react';
-import {TouchableOpacity, View, ImageBackground, Text, Animated, Easing} from 'react-native';
+import {TouchableOpacity, View, Image, Text, Animated, Dimensions } from 'react-native'
 import Icon from 'react-native-vector-icons/Ionicons';
+import { styles } from '../styles/HomeStyles'
+
+const { width } = Dimensions.get('screen');
 
 
 
@@ -15,35 +18,46 @@ class ItemCard extends Component {
     }
 
 
+
     render() {
-        const {item, index, playSong, getVideoURI, screenProps } = this.props;
+        const {item, index, playSong, getVideoURI, screenProps, downloadingVideoKey, playPause } = this.props;
+        const isCurrentSong = screenProps.currentVideoKey === item.uri;
         return (
             <TouchableOpacity 
-            onPress={item.isDownloaded ? () => playSong(index, item) : () => getVideoURI(item.uri, item.title, index, item.imageURI, index)}
-            style={{width: '100%', height:65, flexDirection:'row', justifyContent:'flex-start', alignItems:'center',}}>
-                <Animated.View
-                style={{height:55, width:55, borderRadius:55, overflow: 'hidden',
-                alignItems:'center', justifyContent:'center', position:'relative',
-                transform: [ { rotate } ]}}>
-                    <ImageBackground
+                onPress={isCurrentSong ? () => playPause() : item.isDownloaded ? () => playSong(index, item) : () => getVideoURI(item.uri, item.title, index, item.imageURI, index)}
+                style={{flex: 4, height:65, flexDirection:'row', justifyContent:'flex-start', alignItems:'center',}}
+            >
+                <Image
                     source={{uri: item.imageURI}}
-                    resizeMode='cover' style={{height:'100%', width: '100%', borderRadius:55,}}>
-                    </ImageBackground>
-                </Animated.View>
+                    resizeMode='cover'
+                    style={styles.imageURI}
+                />
                 <View style={{flex: 4, height:'100%', justifyContent: 'center', alignItems:'flex-start', marginLeft:8}}>
                     {screenProps.currentVideoKey == item.uri
                     ?
                     (
                     <React.Fragment>
-                        <Text style={{color: '#1ACBE8', fontSize:12, marginBottom:4, fontWeight:'bold', width:'80%'}} numberOfLines={1} ellipsizeMode={"tail"}>{item.title}</Text>
-                    <Text style={{color: '#1ACBE8', fontSize:12}}>{item.time}{screenProps.isLoadingSong.toString()}{(screenProps.currentVideoKey == item.uri).toString()}</Text>
+                        <Text style={styles.videoTitle} numberOfLines={1} ellipsizeMode={"tail"}>{item.title}</Text>
+                        <View style={{flexDirection:'row', justifyContent: 'flex-start', alignItems:'center'}}>
+                            <Text style={{color: '#ea4c89', fontSize:12,}}>{item.time}</Text>
+                            {downloadingVideoKey.includes(item.uri) &&
+                            (<View style={{justifyContent:'center', alignItems:'center', paddingTop: 3, paddingBottom:3, paddingLeft: 5, paddingRight: 5, backgroundColor: '#222', borderRadius: 100, color:'white', fontSize: 12, marginLeft: 8}}>
+                                <Text style={{color:'white', fontSize: 10}}>Downloading</Text>
+                            </View>)}
+                        </View>
                     </React.Fragment>
                     )
                     :
                     (
                     <React.Fragment>
-                        <Text numberOfLines={1} ellipsizeMode={"tail"} style={{color: 'white', fontSize:12, marginBottom:4, fontWeight:'bold', width:'80%'}}>{item.title}</Text>
-                        <Text style={{color: 'rgba(255, 255, 255, 0.7)', fontSize:12}}>{item.time}</Text>
+                        <Text numberOfLines={1} ellipsizeMode={"tail"} style={{color: '#444', fontSize:12, marginBottom:4, fontWeight:'bold', width:'80%'}}>{item.title}</Text>
+                        <View style={{flexDirection:'row', alignItems:'center', justifyContent:'center'}}>
+                            <Text style={{color: '#456', fontSize:12}}>{item.time}</Text>
+                            {downloadingVideoKey.includes(item.uri) &&
+                            (<View style={{justifyContent:'center', alignItems:'center', paddingTop: 3, paddingBottom:3, paddingLeft: 5, paddingRight: 5, backgroundColor:'#222', borderRadius: 100, color:'white', fontSize: 12, marginLeft: 8}}>
+                               <Text style={{color:'white', fontSize:10}}>Downloading</Text>
+                            </View>)}
+                        </View>
                     </React.Fragment>
                     )
                     }

@@ -1,4 +1,6 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('screen');
 
 export const styles = StyleSheet.create({
     container: {
@@ -6,7 +8,6 @@ export const styles = StyleSheet.create({
       flexDirection: 'column',
       justifyContent: 'space-between',
       alignItems: 'center',
-      backgroundColor: '#0000AE',
     },
     lightbox: {
       position: 'absolute',
@@ -27,13 +28,15 @@ export const styles = StyleSheet.create({
     videoTitle: {
       textAlign: 'left',
       color: '#FFFFFF',
-      width:'93%',
+      width:'80%',
       marginBottom: '6.5%',
       marginTop: '4%',
-      fontSize: 18
+      fontSize: 12,
+      color: '#EEEEEE',
     },
     scrollViewContainer: {
       width:'100%',
+      backgroundColor: '#111111',
     },
     scrollViewFlexbox: {
       justifyContent:'center',
@@ -46,18 +49,54 @@ export const styles = StyleSheet.create({
       borderColor: 'green',
       marginTop: '10%'
     },
-   magic: {
-    height: 65,
-    width:'100%',
-    borderRadius:13,
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    margin: 0,
-    color: 'white',
-    paddingLeft:15,
-    position: 'relative',
-    marginBottom: 10,
-    marginTop: 10,
+    magic: {
+      width:'100%',
+      flexDirection: 'row',
+      justifyContent: 'flex-start',
+      alignItems: 'center',
+      margin: 0,
+      color: 'white',
+      position: 'relative',
+      height: width * 0.34,
+      paddingLeft: 10
+    },
+    imageURI: {
+      width: width * 0.30,
+      height: width * 0.22,
+      borderRadius: 4
+    },
+    loadingCardContainer: {
+      width:'100%',
+      borderRadius:13,
+      flexDirection: 'row',
+      justifyContent: 'flex-start',
+      alignItems: 'center',
+      margin: 0,
+      position: 'relative',
+      marginBottom: 10,
+      marginTop: 10,
+      paddingLeft: 10,
+    },
+    loadingCardThumbnail: {
+      width: width * 0.30,
+      height: width * 0.22,
+      borderRadius: 4,
+      backgroundColor: '#332F2E',
+      marginRight: 8,
+    },
+    loadingDataContainer: {
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+    },
+    loadingCardTitle: {
+      width: width * 0.35,
+      height: 18,
+      marginBottom: 12,
+      backgroundColor: '#332F2E',
+    },
+    loadingCardArtist: {
+      width: width * 0.28,
+      height: 10,
+      backgroundColor: '#332F2E',
     }
 });

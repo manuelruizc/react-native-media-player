@@ -5,6 +5,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import OptionsMenu from 'react-native-options-menu';
 import EditSong from './EditSong';
 import SortableList from 'react-native-sortable-list';
+import { connect } from 'react-redux';
 
 const window = Dimensions.get('window');
 
@@ -74,7 +75,7 @@ class PlaylistSongs extends Component {
         const sourceIsAudio = this.props.screenProps.sourceIsAudio;
         const pathName = sourceIsAudio ? "isAudio" : "isVideo";
         const ext = pathName === "path" ? "mp3" : "mp4";
-        let { allSongs } = this.props.screenProps;
+        let { allSongs } = this.props;
         allSongs = songs === null ? allSongs : songs;
         console.log('allSongs', allSongs)
         this.setState({allSongs: allSongs, songs: allSongs});
@@ -128,9 +129,9 @@ class PlaylistSongs extends Component {
     }
 
     componentWillReceiveProps(newProps) {
-        if(newProps.screenProps.allSongs != this.props.screenProps.allSongs) {
+        if(newProps.allSongs != this.props.allSongs) {
             
-            this.loadSongs(newProps.screenProps.allSongs);
+            this.loadSongs(newProps.allSongs);
         }
     }
 
@@ -143,22 +144,22 @@ class PlaylistSongs extends Component {
         const { songs, isEditingActive } = this.state;
 
         return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-start', backgroundColor:'black', position:'relative' }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-start', backgroundColor:'#D3E0EC', position:'relative' }}>
 
             {this.state.isEditModalActive ? (<EditSong loadSongs={this.loadSongs} item={this.state.currentItem} closeModal={this.closeEditModal} addToAllSongs={this.props.screenProps.addToAllSongs} />) : false}
             
             <View style={{width:'100%', height:'14%', flexDirection:'row', alignItems:'flex-end', justifyContent:'space-between', paddingLeft:'5%', paddingRight:'5%',}}>
                 <View>
-                    <Text onPress={this.saveCurrentOrder} style={{color:'white', marginBottom:10, fontSize:13, fontWeight:'bold', color:'#D3D3D3'}}>PLAYLIST (DOWNLOADED)</Text>
-                    <Text style={{color:'white', fontSize:20}}>{key == "songsDownloadedOnDevice" ? "Descargas" : key}</Text>
+                    <Text onPress={this.saveCurrentOrder} style={{color:'rgba(0,0,0,0.4)', marginBottom:10, fontSize:13, fontWeight:'bold',}}>PLAYLIST (DOWNLOADED)</Text>
+                    <Text style={{color:'#444', fontSize:20}}>{key == "songsDownloadedOnDevice" ? "Downloads" : key}</Text>
                 </View>
                 <View style={cameFrom == "Downloads" ? {display: 'none'} : null}>
                     <Text onPress={isEditingActive ? this.saveCurrentOrder : this.toggleEdit} style={{fontSize:30}}>{isEditingActive ? (<Icon name="ios-bookmark" size={25} color={"white"} />) : (<Icon name="ios-create" size={25} color={"white"} />)}</Text>
                 </View>
             </View>
             <View style={{width:'100%', justifyContent: 'center', alignItems: 'center'}}>
-                <TouchableOpacity style={{width:'40%', height:35, backgroundColor:'#1ACBE8', borderRadius:900, justifyContent: 'center', alignItems: 'center'}} onPress={this.downloadAllPlaylist}>
-                    <Text style={{color:'white'}}>Descargar todo</Text>
+                <TouchableOpacity style={{width:'40%', height:35, backgroundColor:'#ea4c89', borderRadius:900, justifyContent: 'center', alignItems: 'center'}} onPress={this.downloadAllPlaylist}>
+                    <Text style={{color:'white'}}>Download all</Text>
                 </TouchableOpacity>
             </View>
           {this.state.isLoadingLocalStorage ?
@@ -193,8 +194,8 @@ class PlaylistSongs extends Component {
                 </TouchableOpacity>
                 )}
                 <View style={{width: '67%', height:'100%', justifyContent: 'center', alignItems: 'flex-start',}}>
-                    <Text style={{width:'100%', fontSize:10, color:play.isDownloaded && play[pathName] ? '#1ACBE8' : downloadingVideoKey.includes(play.uri) ? "orange" : 'white', marginBottom:3}}>{!(play.customArtist) ? play.channel : play.customArtist }</Text>
-                    <Text style={{width:'100%', fontSize:16, color:play.isDownloaded && play[pathName] ? '#1ACBE8' : downloadingVideoKey.includes(play.uri) ? "orange" : 'white'}} numberOfLines={1} ellipsizeMode={"tail"}>{!play.customName ? play.title : play.customName}</Text>
+                    <Text style={{width:'100%', fontSize:16, color:play.isDownloaded && play[pathName] ? '#ea4c89' : downloadingVideoKey.includes(play.uri) ? "orange" : '#444'}} numberOfLines={1} ellipsizeMode={"tail"}>{!play.customName ? play.title : play.customName}</Text>
+                    <Text style={{width:'100%', fontSize:10, color:play.isDownloaded && play[pathName] ? '#ea4c89' : downloadingVideoKey.includes(play.uri) ? "orange" : '#444', marginBottom:3}}>{!(play.customArtist) ? play.channel : play.customArtist }</Text>
                 </View>
                     {play.isDownloaded ?
                     play.pathVideo && play.pathAudio ?
@@ -266,10 +267,8 @@ class PlaylistSongs extends Component {
             self.props.screenProps.playNewSong(false, index, songData, key);
             self.props.screenProps.loadingState(false);
             self.props.screenProps.changeVideoDownloadStatus(true);
-            self.props.screenProps.changeCurrentVideoUpdate(songData);
         }
         else {
-            self.props.screenProps.changeCurrentVideoUpdate(songData);
             this.props.screenProps.playIndexSong(index, songData, null, true, this.state.songs);
         }
         self.props.screenProps.currentVideoIndexChange(index);
@@ -786,10 +785,10 @@ class PlaylistSongs extends Component {
         ]}>
           <Image source={{uri: data.imageURI}} style={{width:30, height:30, justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#5B4F5F', borderRadius:900}} />
           <View style={{width: '67%', height:'100%', justifyContent: 'center', alignItems: 'flex-start',}}>
-            <Text style={{width:'100%', fontSize:10, color:'rgba(255, 255, 255, 0.6)', marginBottom:3}}>{!(data.customArtist) ? data.channel : data.customArtist }</Text>
-            <Text style={{width:'100%', fontSize:16, color:'white'}} numberOfLines={1} ellipsizeMode={"tail"}>{!data.customName ? data.title : data.customName}</Text>
+            <Text style={{width:'100%', fontSize:16, color:'#444'}} numberOfLines={1} ellipsizeMode={"tail"}>{!data.customName ? data.title : data.customName}</Text>
+            <Text style={{width:'100%', fontSize:10, color:'rgba(0, 0, 0, 0.4)', marginBottom:3}}>{!(data.customArtist) ? data.channel : data.customArtist }</Text>
         </View>
-        <Icon name={"ios-more"} size={24} color={"white"} />
+        <Icon name={"ios-more"} size={24} color={"#444"} />
         </Animated.View>
       );
     }
@@ -881,7 +880,11 @@ class PlaylistSongs extends Component {
 
 
 
+const mapStateToProps = (state) => {
+    return {
+        allSongs: state.allSongs,
+    }
+}
 
 
-
-export default PlaylistSongs;
+export default connect(mapStateToProps)(PlaylistSongs);

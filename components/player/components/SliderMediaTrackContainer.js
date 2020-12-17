@@ -25,16 +25,16 @@ class SliderMediaTrackContainer extends Component {
           value={slidingActive ? currentTimeWhenSliding : this.props.currentTime} // state
           onValueChange={this.props.updateInfoTime} // function props
           step={1}
-          thumbTintColor={"snow"}
-          minimumTrackTintColor='snow'
-          maximumTrackTintColor='rgba(255, 255, 255, 0.25)'
+          thumbTintColor={"#333"}
+          minimumTrackTintColor='#333'
+          maximumTrackTintColor='rgba(0, 0, 0, 0.25)'
           trackStyle={{width:'100%'}}
           onSlidingComplete={this.props.onSlidingComplete} // function props
           onSlidingStart={this.props.onSlidingStart} // function props
           />
           <View style={fullscreen ? {width: (screenWidth/100)*90,flexDirection: 'row', alignItems:'center', justifyContent: 'space-between',} : styles.doNotDisplay}>
-            <Text style={{color:'rgba(255, 255, 255, 0.6)', fontSize:14, fontWeight: 'bold'}}>{slidingActive ? convertMinsSecs(currentTimeWhenSliding*1000, currentTimeWhenSliding) : convertMinsSecs(this.props.currentTime*1000, this.props.currentTime)}</Text>
-            <Text style={{color:'rgba(255, 255, 255, 0.6)', fontSize:14, fontWeight: 'bold'}}>{convertMinsSecs(this.props.duration*1000, this.props.duration)}</Text>
+            <Text style={{color:'rgba(0, 0, 0, 0.6)', fontSize:14, fontWeight: 'bold'}}>{slidingActive ? convertMinsSecs(currentTimeWhenSliding*1000, currentTimeWhenSliding) : convertMinsSecs(this.props.currentTime*1000, this.props.currentTime)}</Text>
+            <Text style={{color:'rgba(0, 0, 0, 0.6)', fontSize:14, fontWeight: 'bold'}}>{convertMinsSecs(this.props.duration*1000, this.props.duration)}</Text>
           </View>
         </View>
       );

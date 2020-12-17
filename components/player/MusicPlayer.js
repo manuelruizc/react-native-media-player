@@ -1,204 +1,246 @@
-import React, {Component} from 'react';
+/* eslint-disable keyword-spacing */
+/* eslint-disable prettier/prettier */
+import React, { useState, useRef, useEffect} from 'react';
 import {View, StyleSheet, Image, ScrollView, Text, TouchableOpacity, TouchableWithoutFeedback, ImageBackground, Dimensions, Animated, Easing, ToastAndroid } from 'react-native';
 import Video from 'react-native-video';
-import {debounce} from 'lodash';
-import { convertMinsSecs } from '../../helpers/snippets';
-import Icon from 'react-native-vector-icons/Ionicons';
 import ControlsContainer from './components/ControlsContainer';
 import SliderMediaTrackContainer from './components/SliderMediaTrackContainer';
-import VolumeContainer from './components/VolumeContainer';
 import { styles } from './styles/MainStyles'
 import ScrollItems from './components/ScrollItems';
-import MediaInfo from './components/MediaInfo';
+import FullPlayer from './components/players/FullPlayer';
+import { PlayButton, PrevButton, NextButton, PlayButtonSmall } from './components/Buttons';
+import { Artist, ArtistSmall, SongInfoContainer, Title, TitleSmall } from './components/Texts';
+import SmallPlayer, { CurrentVideoThumbnail, VideoInfoContainer, VideoTitleContainer } from './components/players/SmallPlayer';
+import { useDispatch, useSelector } from 'react-redux';
+import { togglePause, useTogglePause } from '../../redux/actions/storeActions';
 
 const screenWidth = Dimensions.get('window').width;
 const window = Dimensions.get('window');
-export default class Playlists extends Component {
+const screenHeight = Dimensions.get('window').height;
 
-    constructor(props) {
-        super(props);
+const MusicPlayer = (props) => {
+  // App Store data
+  const allSongs = useSelector(state => state.allSongs);
+  const currentPlaylistName = useSelector(state => state.currentPlaylistName);
+  const currentVideo = useSelector(state => state.currentVideo);
+  const currentVideoIndex = useSelector(state => state.currentVideoIndex);
+  const currentVideoItem = useSelector(state => state.currentVideoItem);
+  const currentVideoKey = useSelector(state => state.currentVideoKey);
+  const downloadedSongsList = useSelector(state => state.downloadedSongsList);
+  const downloadingVideoKey = useSelector(state => state.downloadingVideoKey);
+  const imageURI = useSelector(state => state.imageURI);
+  const isLoadingSong = useSelector(state => state.isLoadingSong);
+  const isDownloadingSong = useSelector(state => state.isDownloadingSong);
+  const isLoadingSearch = useSelector(state => state.isLoadingSearch);
+  const lastSearch = useSelector(state => state.lastSearch);
+  const musicPlayerFullScreen = useSelector(state => state.musicPlayerFullScreen);
+  const playlistSource = useSelector(state => state.playlistSource);
+  const paused = useSelector(state => state.paused);
+  const relatedVideos = useSelector(state => state.relatedVideos);
+  const searchListActive = useSelector(state => state.searchListActive);
+  const searched = useSelector(state => state.searched);
+  const songProgress = useSelector(state => state.songProgress);
+  const sourceIsAudio = useSelector(state => state.sourceIsAudio);
+  const videoTitle = useSelector(state => state.videoTitle);
+  const videoChannel = useSelector(state => state.videoChannel);
+  const videoIsDownloaded = useSelector(state => state.videoIsDownloaded);
+  const videoListPlaylist = useSelector(state => state.videoListPlaylist);
+  const videoList = useSelector(state => state.videoList);
 
-        this.state = {
-            currentTime: 0,
-            currentTimeWhenSliding: 0,
-            slidingActive: false,
-            duration: 0,
-            timeAvailable: false,
-            playerFullScreen: false,
-            seconds: 0,
-            volume: 0,
-            showFullButtons: false,
-            activeFullButonsDuration: 3,
-            activationInterval: null,
-            lastIndex: 0,
-            isFavorited: false,
-        }
-    }
+  const _dispatchTogglePause = useTogglePause();
 
-    componentWillMount() {
-      this.animatedValue = new Animated.Value(1);
-      this.initAnimValue = new Animated.Value(150);
-    }
+  let myScroll = useRef(null);
+  let player = useRef(null);
+  let listOfVideos = searchListActive ? relatedVideos : videoListPlaylist;
+  const initAnimValue = new Animated.Value(150)
+  const animatedValue = new Animated.Value(1)
+  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTimeWhenSliding, setCurrentTimeWhenSliding] = useState(0);
+  const [slidingActive, setSlidingActive] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
 
-    componentWillReceiveProps(newProps) {
-      const { searchListStatus, currentVideoIndex, musicPlayerFullScreen } = newProps;
-      const sls = this.props.searchListStatus;
-      const cvi = this.props.currentVideoIndex;
-      if(musicPlayerFullScreen && musicPlayerFullScreen != this.props.musicPlayerFullScreen) {
-        this.myScroll.scrollTo({x: currentVideoIndex*screenWidth, y:0, animated: true});
+  const [timeAvailable, setTimeAvailable] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const [volume, setVolume] = useState(0);
+  const [showFullButtons, setShowFullButtons] = useState(false);
+  const [lastIndex, setLastIndex] = useState(0);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const isPaused = useSelector(state => state.paused);
+  const dispatch = useDispatch();
+  const toggleMusicPlayerFullScreen = () => {
+    dispatch({type: 'TOGGLE_PLAYER_FULLSCREEN'});
+  }
+ 
+    useEffect(() => {
+      // let { songProgress, currentVideoIndex, searchListActive } = props;
+
+      if(!searchListActive) {
+        myScroll.scrollTo({x: currentVideoIndex * screenWidth, y:0, animated: true});
       }
-
-      if(newProps.allSongs != this.props.allSongs || (newProps.currentVideoIndex != this.props.currentVideoIndex)) {
-        console.log('NEW: ',newProps.allSongs)
-        console.log('OLD: ',this.props.allSongs)
-        const { relatedVideos, searchListStatus, playlistSaved, currentPlaylistName, currentVideoIndex, currentVideoKey, allSongs } = newProps;
-        const videos = searchListStatus ? relatedVideos : playlistSaved;
-        const video = videos[currentVideoIndex];
-        let id = null;
-        if(video != undefined) {
-          console.log("BILLIE JEAN")
-          id = searchListStatus ? video.id : video.uri;
-          const isFavorited = this.isFavorited(id, newProps.allSongs);
-          this.setState({isFavorited});
-        }
-      }
-
-      if(cvi === this.state.lastIndex)
-        return;
-      if(!searchListStatus) {
-        this.myScroll.scrollTo({x: currentVideoIndex*screenWidth, y:0, animated: true});
-      }
-    }
-    
-    componentWillUnmount() {
-      
-      this.props.setSongProgress(this.state.currentTime, true);
-    }
-
-    async componentDidMount() {
-      let { songProgress, currentVideoIndex, searchListStatus } = this.props;
-
-      if(!searchListStatus) {
-        this.myScroll.scrollTo({x: currentVideoIndex * screenWidth, y:0, animated: true});
-      }
-      
-      this.setState({
-        currentTime: songProgress
-      });
-  
-      
-
-
-      Animated.timing(this.initAnimValue, {
+      setTimeout(() => {
+        setIsMounted(true);
+      }, 900);
+      setCurrentTime(songProgress);
+      Animated.timing(initAnimValue, {
         toValue: 0,
         duration: 750,
         delay: 240,
         easing: Easing.linear
       }).start()
+      return () => {
+        props.setSongProgress(currentTime, true);
+      };
+    }, []);
 
-    }
-
-    
-    
-    _animOnPressIn = () => {
-      Animated.spring(this.animatedValue, {
-        toValue: 1.2,
-    }).start()
-    }
-
-    _animOnPressOut = () => {
-      Animated.spring(this.animatedValue, {
-        toValue: 1, 
-        friction: 3,
-        tension: 40
-        }).start()  
-    }
-
-    toggleVideoFullscreen = (toggle = true) => {
-      if(toggle) {
-        this.setState({playerFullScreen: !this.state.playerFullScreen});
-        return true;
+    useEffect(() => {
+      if(!searchListActive) {
+        myScroll.scrollTo({x: currentVideoIndex*screenWidth, y:0, animated: true});
       }
-      this.setState({playerFullScreen: toggle});
-    }
+      
+      listOfVideos = searchListActive ? relatedVideos : videoListPlaylist;
+        if(!searchListActive && listOfVideos.length > 0 && currentPlaylistName != 'songsDownloadedOnDevice' && currentPlaylistName != "searchbar") {
+      
+            listOfVideos = listOfVideos.filter(video => video.playlistsIndex != undefined && video.playlistsIndex[currentPlaylistName] != undefined);
+            
+            listOfVideos.sort(function(a, b) { 
+              return a.playlistsIndex[currentPlaylistName] - b.playlistsIndex[currentPlaylistName];
+            });
+          }
+    }, [searchListActive]);
 
-    toggleShowButtons = () => {
-      const self = this;
-      const boolean = this.state.showFullButtons ? false : true;
-      self.setState({showFullButtons: boolean, activeFullButtonsDuration: 3}, () => {
-        boolean ? this.setState({activationInterval: setInterval(this.animationInterval, 1000)}) : self.state.activationInterval === null ? 
-          null : clearInterval(self.state.activationInterval);
-      })
-    }
+    useEffect(() => {
+      if(musicPlayerFullScreen)
+        myScroll.scrollTo({x: currentVideoIndex*screenWidth, y:0, animated: true});
+    }, [musicPlayerFullScreen]);
 
+    // useEffect(() => {
+    //   if(props.currentVideoIndex === lastIndex) {
+
+    //   }
+    // }, [props.currentVideoIndex]);
+
+    useEffect(() => {
+      // const { relatedVideos, searchListActive, videoListPlaylist, currentVideoIndex } = props;
+      const videos = searchListActive ? relatedVideos : videoListPlaylist;
+      const video = videos[currentVideoIndex];
+      let id = null;
+      if(video != undefined) {
+        
+        id = searchListActive ? video.id : video.uri;
+        const isVideoFavorited = isSongFavorited(id, allSongs);
+        setIsFavorited(isVideoFavorited);
+      }
+    }, [allSongs, currentVideoIndex]);
+
+
+    // componentWillReceiveProps(newProps) {
+    //   const { searchListActive, currentVideoIndex, musicPlayerFullScreen } = newProps;
+    //   const sls = props.searchListActive;
+    //   const cvi = props.currentVideoIndex;
+    //   if(musicPlayerFullScreen && musicPlayerFullScreen != props.musicPlayerFullScreen) {
+    //     myScroll.scrollTo({x: currentVideoIndex*screenWidth, y:0, animated: true});
+    //   }
+
+    //   if(newProps.allSongs != props.allSongs || (newProps.currentVideoIndex != props.currentVideoIndex)) {
+        
+    //     const { relatedVideos, searchListActive, videoListPlaylist, currentPlaylistName, currentVideoIndex, currentVideoKey, allSongs } = newProps;
+    //     const videos = searchListActive ? relatedVideos : videoListPlaylist;
+    //     const video = videos[currentVideoIndex];
+    //     let id = null;
+    //     if(video != undefined) {
+          
+    //       id = searchListActive ? video.id : video.uri;
+    //       const isFavorited = this.isFavorited(id, newProps.allSongs);
+    //       this.setState({isFavorited});
+    //     }
+    //   }
+
+    //   if(cvi === this.state.lastIndex)
+    //     return;
+    //   if(!searchListActive) {
+    //     myScroll.scrollTo({x: currentVideoIndex*screenWidth, y:0, animated: true});
+    //   }
+    // }
     
-    handleScroll = (event) =>  {
-      const { lastIndex } = this.state;
-      const {  searchListStatus } = this.props;
+
+    // const toggleVideoFullscreen = (toggle = true) => {
+    //   if(toggle) {
+    //     this.setState({playerFullScreen: !playerFullScreen});
+    //     return true;
+    //   }
+    //   this.setState({playerFullScreen: toggle});
+    // }
+
+    // const toggleShowButtons = () => {
+    //   const self = this;
+    //   const boolean = showFullButtons ? false : true;
+    //   self.setState({showFullButtons: boolean, activeFullButtonsDuration: 3}, () => {
+    //     boolean ? setState({activationInterval: setInterval(this.animationInterval, 1000)}) : activationInterval === null ? 
+    //       null : clearInterval(activationInterval);
+    //   })
+    // }
+    
+    const handleScroll = ({nativeEvent}) =>  {
       const width = screenWidth;
-      const offset = event.nativeEvent.contentOffset.x;
+      const offset = nativeEvent.contentOffset.x;
       const result = Math.round(offset / width);
-      console.log("aqhi madre", {
-        result, width,
-      });
+      
+      if((offset/width) != result) return;
       if(lastIndex === result) return;
-      if(searchListStatus) {
-        const { relatedVideos } = this.props;
+      if(searchListActive) {
         const video = relatedVideos[result];
-        this.props.playNextSongOnScroll(result, video);
+        props.playNextSongOnScroll(result, video);
       }
       else {
-        const { playlistSaved } = this.props;
-        const video = playlistSaved[result];
+        const video = videoListPlaylist[result];
         const isDownloaded = video.isDownloaded;
         if(isDownloaded) {
-          this.props.playNextSong(null, false, result);
+          const _pausedState = isMounted ? null : true;
+          props.playNextSong(null, false, result, _pausedState);
         }
         else {
-          this.props.playNextSongOnScroll(result, video, false, true);
+          props.playNextSongOnScroll(result, video, false, true);
         }
       }
       
-      this.setState({ lastIndex: result });
+      setLastIndex(result);
     }
 
-    _scrollToSong = () => {
-      const { searchListStatus, currentVideoIndex } = this.props;
+    const _scrollToSong = () => {
+      // const { searchListActive, currentVideoIndex } = props;
 
-      if(!searchListStatus) {
-        this.myScroll.scrollTo({x: this.state.lastIndex*screenWidth, y: 0, animated: true});
+      if(!searchListActive) {
+        myScroll.scrollTo({x: lastIndex*screenWidth, y: 0, animated: true});
       }
     }
 
-    addToPlaylist = () => {
-      const { relatedVideos, searchListStatus, playlistSaved, } = this.props;
-      const { lastIndex } = this.state;
-      let videos = searchListStatus ? relatedVideos : playlistSaved;
+    const addToPlaylist = () => {
+      // const { relatedVideos, searchListActive, videoListPlaylist, } = props;
+      let videos = searchListActive ? relatedVideos : videoListPlaylist;
       const video = videos[lastIndex];
-      console.log("bibi gaitan", {video, videos, lastIndex, relatedVideos, playlistSaved,searchListStatus});
       if(video.uri === undefined) {
         let item =  { channel: video.author, title:  video.title, uri: video.id, time: 0, imageURI: video.video_thumbnail };
-        this.props.addToPlaylist(item);
+        props.addToPlaylist(item);
       }
       else {
-        this.props.addToPlaylist(video);
+        props.addToPlaylist(video);
       }
     }
 
-    deleteFromPlaylist = () => {
-      const { relatedVideos, searchListStatus, playlistSaved, } = this.props;
-      const { lastIndex } = this.state;
-      let videos = searchListStatus ? relatedVideos : playlistSaved;
+    const deleteFromPlaylist = () => {
+      // const { relatedVideos, searchListActive, videoListPlaylist, } = props;
+      let videos = searchListActive ? relatedVideos : videoListPlaylist;
       const video = videos[lastIndex];
       if(video.uri === undefined) {
-        this.props.deleteSongFromPlaylist(video.id);
+        props.deleteSongFromPlaylist(video.id);
       }
       else {
-        this.props.deleteSongFromPlaylist(video.uri);
+        props.deleteSongFromPlaylist(video.uri);
       }
     }
 
-    isFavorited = (uri, allSongs) => {
+    const isSongFavorited = (uri, allSongs) => {
       let isFavorited = false;
       for(let i = 0; i < allSongs.length; i++) {
         const song = allSongs[i];
@@ -211,362 +253,357 @@ export default class Playlists extends Component {
       return isFavorited;
     }
 
-  render() {
-    const isPaused = this.props.paused;
-    const fullscreen = /*true*/this.props.musicPlayerFullScreen;
-    const downloaded = this.props.videoIsDownloaded; 
-    const isAudioSource = this.props.sourceIsAudio;
-    const { playerFullScreen, showFullButtons } = this.state;
-    const item = this.props.currentVideoItem === null ? null : this.props.currentVideoItem;
-    const { relatedVideos, searchListStatus, playlistSaved, currentPlaylistName, currentVideoIndex, currentVideoKey, allSongs } = this.props;
-    const { isFavorited } = this.state;
+  // const animationInterval = () => {
+  //   if(this.state.activeFullButtonsDuration === 0) {
+  //     clearInterval(this.state.activationInterval);
+  //     this.setState({showFullButtons: false, activeFullButtonsDuration: 4, activationInterval: null}, () => console.log(this.state));
+  //   }
+  //   else
+  //     this.setState({activeFullButtonsDuration: this.state.activeFullButtonsDuration - 1});
+  // }
 
-    let list_of_videos = searchListStatus ? relatedVideos : playlistSaved;
-    if(!searchListStatus && list_of_videos.length > 0 && currentPlaylistName != 'songsDownloadedOnDevice' && currentPlaylistName != "searchbar") {
-      list_of_videos.sort(function(a, b) { 
-        return a.playlistsIndex[currentPlaylistName] - b.playlistsIndex[currentPlaylistName];
-      });
-    }
-
-    return (
-        <Animated.View style={fullscreen ? styles.playaContainerFullScreen : [styles.playaContainer, {transform: [{translateY: this.initAnimValue}]}]}>
-          <View style={[{width: screenWidth, height:screenWidth, alignItems: 'center', justifyContent: 'center', marginBottom: 45, paddingRight: !isAudioSource ? 15 : 0}, fullscreen ? {} : {position: 'absolute', top: 0, right: 600,}]}>
-            <ScrollView 
-            ref={(ref) => {
-              this.myScroll = ref;
-            }}
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={event => this.handleScroll(event)}
-            scrollEventThrottle={16} contentContainerStyle={{flexGrow: 1}} horizontal pagingEnabled >
-                <ScrollItems
-                  isAudioSource={isAudioSource}
-                  searchListStatus={searchListStatus}
-                  videos={list_of_videos}
-                  item={item}
-                />
-                <View style={isAudioSource ? styles.doNotDisplay : fullscreen ? playerFullScreen ? {width:'100%', height: '100%', position:'relative'} : {width:'100%', height: '100%',} : styles.doNotDisplay}>
-                  <Video
-                  style={isAudioSource ? styles.doNotDisplay : playerFullScreen ? {width: window.height + 38.5, height: window.width, backgroundColor: 'black', transform: [{rotate:'90deg'}, {translateX: (window.width / 100) * 58.35}, {translateY: (window.height / 100) * 28.32}], zIndex: 101} :{width:'100%', height:'100%', backgroundColor:'rgba(0, 0, 0, 0.97)'}} 
-                  source={{uri: this.props.currentVideo}}
-                  ref={(ref) => {
-                  this.player = ref
-                  }}     // Store reference
-                  onBuffer={this.onBuffer}       // Callback when remote video is buffering
-                  onError={this.errorSong}        // Callback when video cannot be loaded
-                  onAudioBecomingNoisy={this.stop}
-                  playInBackground={true}
-                  fullscreen={true}
-                  resizeMode={"contain"}
-                  audioOnly={true}
-                  onLoad={this.onLoad}
-                  paused={isPaused}
-                  onEnd={this.VideoEnded}
-                  onProgress={this.Progress} 
-                  progressUpdateInterval={1000}
-                  onSeek={this.onSeek}
-                  />
-                  <View
-                    style={isAudioSource ? styles.doNotDisplay : playerFullScreen ? {width: window.height + 38.5, height: window.width, transform: [{rotate:'90deg'}, {translateX: (window.width / 100) * 58.35}, {translateY: (window.height / 100) * 28.32}], zIndex: 400, justifyContent:'center', alignItems:'center', position: 'absolute'} : styles.doNotDisplay}
-                  >
-                    <View onStartShouldSetResponder={() => this.toggleShowButtons()} style={playerFullScreen ? {zIndex:399, position:'relative', width:'100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.45)', flexDirection:'row', alignItems:'center', justifyContent: 'space-around', display: showFullButtons ? "flex" : "none"} : styles.doNotDisplay}>
-                      <TouchableWithoutFeedback onPressIn={() => this.seekSong(-5, true)}>
-                        <Animated.View>
-                          <Icon name={"ios-rewind"} size={50} color={"#FFFFFF"} style={{padding:10,}} />
-                        </Animated.View>
-                      </TouchableWithoutFeedback>
-                      <TouchableWithoutFeedback onPressOut={() => this.playPause(true)} onPressIn={this._animOnPressIn}>
-                        <Animated.View style={{transform: [{scale: this.animatedValue}]}}>
-                          <Icon name={isPaused ? "ios-play" : "ios-pause"} size={fullscreen ? 65 : 50} color={"#FFFFFF"} style={{padding:10}} />
-                        </Animated.View>
-                      </TouchableWithoutFeedback>
-                      <TouchableWithoutFeedback onPressIn={() => this.seekSong(5, true)}>
-                        <Animated.View>
-                          <Icon name={"ios-rewind"} size={50} color={"#FFFFFF"} style={{padding:10,transform: [{rotate: '180deg'}]}} />
-                        </Animated.View>
-                      </TouchableWithoutFeedback>
-                      <View style={{position:'absolute', bottom:8, right: 8, flexDirection:'row', alignItems:'center', justifyContent:'center'}}>
-                        <TouchableWithoutFeedback  onPress={() => {this.toggleVideoFullscreen(false); this.toggleShowButtons();}}>
-                            <Icon name={"md-expand"} size={32} color={"#FFFFFF"} style={{padding:10,}} />
-                        </TouchableWithoutFeedback>
-                      </View>
-                    </View>
-                    <View onStartShouldSetResponder={() => this.toggleShowButtons()} style={playerFullScreen ? {zIndex:398, position:'absolute', width:'100%', height:'100%', top:0, left:0,} : styles.doNotDisplay}></View>
-                  </View>
-                </View>
-              </ScrollView>
-            </View>
-
-            
-            <MediaInfo
-              fullscreen={fullscreen}
-              item={item}
-              videoChannel={this.props.videoChannel}
-              videoTitle={this.props.videoTitle}
-            />
-
-            <SliderMediaTrackContainer
-              fullscreen={fullscreen}
-              duration={this.state.duration}
-              currentTime={this.state.currentTime}
-              currentTimeWhenSliding={this.state.currentTimeWhenSliding}
-              slidingActive={this.state.slidingActive}
-              updateInfoTime={this.updateInfoTime}
-              onSlidingComplete={this.onSlidingComplete}
-              onSlidingStart={this.onSlidingStart}
-            />
-
-
-            <ControlsContainer
-              isPaused={isPaused}
-              fullscreen={fullscreen}
-              toggleFullScreen={this.toggleFullScreen}
-              videoTitle={this.props.videoTitle}
-              item={item}
-              currentTime={this.state.currentTime}
-              duration={this.state.duration}
-              nextSong={this.nextSong}
-              seekSong={this.seekSong}
-              prevSong={this.prevSong}
-              animatedValue={this.animatedValue}
-              _animOnPressIn={this._animOnPressIn}
-              playPause={this.playPause}
-            />
-
-
-            <VolumeContainer
-              fullscreen={fullscreen}
-              volume={this.state.volume}
-            />
-            {fullscreen && !isAudioSource ?
-                  (
-                  <View style={{position:'absolute', bottom:5, right:5}}>
-                    <TouchableWithoutFeedback onPress={() => {this.toggleVideoFullscreen(); this.toggleShowButtons();}}>
-                      <Icon name={"ios-expand"} size={32} color={"#FFFFFF"} style={{padding:10,}} />
-                    </TouchableWithoutFeedback>
-                  </View>
-                  )
-                  :
-                  null
-                }
-        </Animated.View>
-    );
+  const playPause = () => {
+      _dispatchTogglePause();
   }
 
-  animationInterval = () => {
-    if(this.state.activeFullButtonsDuration === 0) {
-      clearInterval(this.state.activationInterval);
-      this.setState({showFullButtons: false, activeFullButtonsDuration: 4, activationInterval: null}, () => console.log(this.state));
-    }
-    else
-      this.setState({activeFullButtonsDuration: this.state.activeFullButtonsDuration - 1});
-  }
-
-
-  playPause = (animation = false) => {
-      this._animOnPressOut();
-      this.props.playpause();
-      const { activeFullButtonsDuration, activationInterval } = this.state;
-      if(animation) {
-        if(activeFullButtonsDuration) {
-          this.setState({activeFullButtonsDuration: 4});
-        }
-        else if(activationInterval != null) {
-          this.setState({activationInterval: setInterval(this.animationInterval, 1000)})
-        }
-      }
-  }
-
-  seekSong = (seconds, animation = false) => {
-    let { currentTime, duration, activeFullButtonsDuration, activationInterval } = this.state;
+  const seekSong = (seconds, animation = false) => {
     if(currentTime + seconds < 0) {
-      this.player.seek(0);
+      player.seek(0);
       return true;
     }
     else if(currentTime + seconds > duration) {
-      this.player.seek(Number(duration - 1));
+      player.seek(Number(duration - 1));
     }
 
-    if(animation) {
-      if(activeFullButtonsDuration) {
-        this.setState({activeFullButtonsDuration: 4});
-      }
-      else if(activationInterval != null) {
-        this.setState({activationInterval: setInterval(this.animationInterval, 1000)})
-      }
-    }
-    this.player.seek(Number(currentTime + seconds));
+    // if(animation) {
+    //   if(activeFullButtonsDuration) {
+    //     this.setState({activeFullButtonsDuration: 4});
+    //   }
+    //   else if(activationInterval != null) {
+    //     this.setState({activationInterval: setInterval(this.animationInterval, 1000)})
+    //   }
+    // }
+    player.seek(Number(currentTime + seconds));
   }
 
+  // const goToFullScreen = () => {
+  //   if(!playerFullScreen && !props.isAudioSource) {
+  //       setState({playerFullScreen: true});
+  //   }
+  // }
 
-  goToFullScreen = () => {
-    if(!this.state.playerFullScreen && !this.props.isAudioSource) {
-        this.setState({playerFullScreen: true});
-    }
+  const downloadSong = (item) => {
+    props.downloadSong(item)
   }
 
-  downloadSong = (item) => {
-    this.props.downloadSong(item)
+  const updateInfoTime = (currentTime) => {
+    setCurrentTime(currentTime);
+    setCurrentTimeWhenSliding(currentTime);
   }
 
-  updateInfoTime = (currentTime) => {
-      this.setState({currentTime, currentTimeWhenSliding: currentTime});
+  const onSlidingComplete = (currentTime) => {
+    setCurrentTime(currentTime);
+    setCurrentTimeWhenSliding(currentTime);
+    setSlidingActive(false);
+    player.seek(currentTime);
   }
 
-  onSlidingComplete = (currentTime) => {
-    this.setState({currentTime, currentTimeWhenSliding: currentTime, slidingActive: false}, () => this.player.seek(currentTime));
+  const onSlidingStart = () => {
+    setSlidingActive(true);
   }
 
-  onSlidingStart = () => {
-    this.setState({slidingActive: true});
+  const onSeek = (info) => {
+    
   }
 
-  onSeek = (info) => {
-    console.log(info.currentTime)
-    console.log(info.seekTime)
+  const toggleFullScreen = () => {
+      props.toggleFullScreenMusicPlayer();
   }
 
-  toggleFullScreen = () => {
-      this.props.toggleFullScreenMusicPlayer();
-  }
-
-  Progress = (info) => {
-    if(this.state.timeAvailable) return;
+  const Progress = (info) => {
+    if(timeAvailable) return;
     let {currentTime} = info;
-    let secs = 0;
-    let self = this;
-
     currentTime = Math.round(Number(currentTime));
-
-    this.setState({seconds: this.state.seconds+1});
-
-
-    if(!this.state.timeAvailable) {
-        this.setState({currentTime});
+    setSeconds(seconds + 1);
+    if(!timeAvailable) {
+        setCurrentTime(currentTime);
     }
   }
 
-  stop = () => {
-      this.props.stop()
-  }
-
-  onLoad = (info) => {
+  const onLoad = (info) => {
     let {duration, currentPosition} = info;
     let nextIndex = 0;
-    const { relatedVideos, searchListStatus, playlistSaved, currentPlaylistName, currentVideoIndex, currentVideoKey, allSongs } = this.props;
-
+    // const { relatedVideos, searchListActive, videoListPlaylist, currentPlaylistName, currentVideoIndex, currentVideoKey, allSongs } = props;
     duration = Math.round(Number(duration));
-    currentPosition = this.props.songProgress;
-    this.setState({duration});
-    this.player.seek(this.props.songProgress);
-    if(this.props.videoIsDownloaded) {
-        // this.props.updateLastSongData();
+    currentPosition = songProgress;
+    setDuration(duration);
+    if(videoIsDownloaded) {
+        // props.updateLastSongData();
     }
     if(currentVideoIndex === 0) {
-      this.myScroll.scrollTo({x: 0, y: 0, animated: true});
+      myScroll.scrollTo({x: 0, y: 0, animated: true});
     }
-    this.props.enableMusicControls();
+    props.enableMusicControls();
   }
 
-  VideoEnded = () => {
-    const { searchListStatus, currentVideoIndex, relatedVideos, playlistSaved } = this.props;
-    const {  lastIndex } = this.state;
+  const VideoEnded = () => {
+    // const { searchListActive, currentVideoIndex, relatedVideos, videoListPlaylist } = props;
     let index = lastIndex + 1;
-    this.setState( { lastIndex: index } );
+    setLastIndex(index);
+    setCurrentTime(0);
     let scrollToValue = screenWidth*index;
-    if(searchListStatus) {
+    if(searchListActive) {
       const video = relatedVideos[index];
       if(video == undefined) return false;
-      this.props.playNextSongOnScroll(index, video);
-      this.myScroll.scrollTo({x: scrollToValue, y:0,  animated: true})
+      props.playNextSongOnScroll(index, video);
+      myScroll.scrollTo({x: scrollToValue, y:0,  animated: true})
     }
     else {
-      index = playlistSaved[index] === undefined ? 0 : index;
-      this.setState({lastIndex: index});
+      index = videoListPlaylist[index] === undefined ? 0 : index;
+      setLastIndex(index);
       scrollToValue = screenWidth*index;
-      this.myScroll.scrollTo({x: scrollToValue, y:0,  animated: true})
-      this.props.playNextSong();
+      myScroll.scrollTo({x: scrollToValue, y:0,  animated: true})
+      props.playNextSong();
     }
   }
 
-  nextSong = () => {
-    const { searchListStatus, currentVideoIndex, relatedVideos, playlistSaved } = this.props;
-    let {  lastIndex } = this.state;
+  const nextSong = () => {
+    // const { searchListActive, currentVideoIndex, relatedVideos, videoListPlaylist } = props;
     let index = lastIndex + 1;
-    this.setState( { lastIndex: index } );
-    let scrollToValue = screenWidth*index;
-    if(searchListStatus) {
+    setLastIndex(index);
+    let scrollToValue = screenWidth * index;
+    if(searchListActive) {
+      console.log('USING SCROLLING');
       const video = relatedVideos[index];
       if(video == undefined) return false;
-      console.log('viddid', video);
-      console.log('index', index)
-      this.props.playNextSongOnScroll(index, video);
-      this.myScroll.scrollTo({x: scrollToValue, y:0,  animated: true});
+      props.playNextSongOnScroll(index, video);
+      myScroll.scrollTo({x: scrollToValue, y:0,  animated: true});
     }
     else {
-      this.props.playNextSong();
-      index = playlistSaved[index] === undefined ? 0 : index;
-      this.setState({lastIndex: index})
-      scrollToValue = screenWidth*index;
-      this.myScroll.scrollTo({x: scrollToValue, y:0,  animated: true});
+      console.log('we are using this');
+      index = videoListPlaylist[index] === undefined ? 0 : index;
+      setLastIndex(index);
+      scrollToValue = screenWidth * index;
+      myScroll.scrollTo({x: scrollToValue, y:0,  animated: true});
+      props.playNextSong();
     }
   }
 
-  errorSong = () => {
+  const errorSong = () => {
     ToastAndroid.showWithGravity(
       "This song can't be played",
       ToastAndroid.SHORT,
       ToastAndroid.CENTER,
     );
-    const { searchListStatus, currentVideoIndex, relatedVideos, playlistSaved, appIsConnected } = this.props;
+    // const { searchListActive, currentVideoIndex, relatedVideos, videoListPlaylist, appIsConnected } = props;
     if(!appIsConnected) return false;
-    const {  lastIndex } = this.state;
     let index = lastIndex + 1;
-    this.setState( { lastIndex: index } );
+    setLastIndex(index);
     let scrollToValue = screenWidth*index;
-    if(searchListStatus) {
+    if(searchListActive) {
+      return;
       const video = relatedVideos[currentVideoIndex + 1];
       if(video == undefined) return false;
-      this.props.playNextSongOnScroll(index, video);
-      this.myScroll.scrollTo({x: scrollToValue, y:0,  animated: true})
+      props.playNextSongOnScroll(index, video);
+      myScroll.scrollTo({x: scrollToValue, y:0,  animated: true})
     }
     else {
-      index = playlistSaved[index] === undefined ? 0 : index;
-      this.setState({lastIndex: index});
+      return;
+      index = videoListPlaylist[index] === undefined ? 0 : index;
+      setLastIndex(index);
       scrollToValue = screenWidth*index;
-      this.props.playNextSong();
+      props.playNextSong();
     }
   }
 
-  prevSong = () => {
-    let {currentTime} = this.state;
+  const prevSong = () => {
     currentTime = Math.round(Number(currentTime));
-    const { searchListStatus, currentVideoIndex, relatedVideos, playlistSaved } = this.props;
+    // const { searchListActive, currentVideoIndex, relatedVideos, videoListPlaylist } = props;
     let index = 0;
     let scrollToValue = 0;
     if(currentTime < 2) {
-      const { lastIndex } = this.state;
 
-      if(searchListStatus) {
-        index = lastIndex === 0 ? this.props.relatedVideos.length - 1 : lastIndex - 1;
-        this.setState( { lastIndex: index } );
+      if(searchListActive) {
+        index = lastIndex === 0 ? relatedVideos.length - 1 : lastIndex - 1;
+        setLastIndex(lastIndex);
         scrollToValue = screenWidth*index;
         const video = relatedVideos[index];
         if(video == undefined) return false;
-        this.props.playNextSongOnScroll(index, video);
-        this.myScroll.scrollTo({x: scrollToValue, y:0,  animated: true});
+        props.playNextSongOnScroll(index, video);
+        myScroll.scrollTo({x: scrollToValue, y:0,  animated: true});
       }
       else {
-        index = lastIndex === 0 ? playlistSaved.length - 1 : lastIndex - 1;
-        this.setState({lastIndex: index});
+        console.log("WE USING THIS")
+        index = lastIndex === 0 ? videoListPlaylist.length - 1 : lastIndex - 1;
+        setLastIndex(lastIndex);
         scrollToValue = screenWidth*index;  
-        this.myScroll.scrollTo({x: scrollToValue, y:0,  animated: true})
-        this.props.playNextSong(true, false, index);
+        myScroll.scrollTo({x: scrollToValue, y:0,  animated: true})
+        props.playNextSong(true, false, index);
       }
 
     }
     else {
-      this.setState({currentTime:0}, () => this.player.seek(0));
+      setCurrentTime(0);
+      player.seek(0);
     }
   }
+
+
+  // const isPaused = props.paused;
+  const fullscreen = musicPlayerFullScreen;
+  const downloaded = videoIsDownloaded; 
+  const isAudioSource = sourceIsAudio;
+  const item = currentVideoItem === null ? null : currentVideoItem;
+  const title = item === null ? 'videoTitle' : !item.customName ? item.title : item.customName;
+  const artist = item === null ? 'videoChannel' : !item.customArtist ? item.channel : item.customArtist;
+  const currentBackgroundImageSource = currentVideoItem.imageURI;
+  // const { relatedVideos, searchListActive, videoListPlaylist, currentPlaylistName, currentVideoIndex, currentVideoKey, allSongs } = props;
+
+  let list_of_videos = searchListActive ? relatedVideos : videoListPlaylist;
+  if(!searchListActive && list_of_videos.length > 0 && currentPlaylistName != 'songsDownloadedOnDevice' && currentPlaylistName != "searchbar") {
+    
+    list_of_videos = list_of_videos.filter(video => video.playlistsIndex != undefined && video.playlistsIndex[currentPlaylistName] != undefined);
+    
+    list_of_videos.sort(function(a, b) {
+      return a.playlistsIndex[currentPlaylistName] - b.playlistsIndex[currentPlaylistName];
+    });
+  }
+
+
+  return (
+      <Animated.View style={fullscreen ? styles.playaContainerFullScreen : styles.playaContainer}>
+        {props.children}
+        <Video
+          style={styles.doNotDisplay} 
+          source={{uri: currentVideo}}
+          ref={(ref) => { player = ref}}
+          onError={errorSong}
+          onAudioBecomingNoisy={() => dispatch({type: 'TOGGLE_PAUSE_STATE'})}
+          playInBackground={true}
+          fullscreen={true}
+          resizeMode={"contain"}
+          audioOnly={true}
+          onLoad={onLoad}
+          paused={isPaused}
+          onEnd={VideoEnded}
+          onProgress={Progress} 
+          progressUpdateInterval={1000}
+          onSeek={onSeek}
+        />
+        <SmallPlayer fullscreen={musicPlayerFullScreen} >
+          <TouchableOpacity onPress={toggleMusicPlayerFullScreen}>
+            <VideoInfoContainer>
+              <CurrentVideoThumbnail source={currentBackgroundImageSource} resizeMode='cover' />
+              <VideoTitleContainer>
+                <TitleSmall>{title}</TitleSmall>
+                <ArtistSmall>{artist}</ArtistSmall>
+              </VideoTitleContainer>
+            </VideoInfoContainer>
+          </TouchableOpacity>
+          <PlayButtonSmall onPress={(playPause)} isPaused={isPaused} />
+        </SmallPlayer>
+        <FullPlayer
+          searchListStatus={searchListActive}
+          item={item}
+          currentPlaylistName={currentPlaylistName}
+          fullscreen={fullscreen}
+          playlistSaved={videoListPlaylist}
+          relatedVideos={relatedVideos}
+        >
+          <View style={styles_.carouselContainer}>
+              <ScrollView
+                ref={ref => myScroll = ref}
+                showsHorizontalScrollIndicator={false}
+                onScroll={(event) => handleScroll(event)}
+                scrollEventThrottle={16}
+                contentContainerStyle={{flexGrow: 1}}
+                horizontal
+                pagingEnabled
+              >
+              <ScrollItems
+                isAudioSource={true}
+                searchListStatus={searchListActive}
+                videos={listOfVideos}
+                item={item}
+              />
+            </ScrollView>
+          </View>
+          <SliderMediaTrackContainer
+            fullscreen={fullscreen}
+            duration={duration}
+            currentTime={currentTime}
+            currentTimeWhenSliding={currentTimeWhenSliding}
+            slidingActive={slidingActive}
+            updateInfoTime={updateInfoTime}
+            onSlidingComplete={onSlidingComplete}
+            onSlidingStart={onSlidingStart}
+          />
+          <SongInfoContainer>
+            <Title>{title}</Title>
+            <Artist>{artist}</Artist>
+          </SongInfoContainer>
+          <ControlsContainer>
+            <PrevButton onPress={prevSong} />
+            <PlayButton onPress={playPause} isPaused={isPaused} />
+            <NextButton onPress={nextSong} />
+          </ControlsContainer>
+        </FullPlayer>
+      </Animated.View>
+    );
 }
 
+
+const styles_ = StyleSheet.create({
+  carouselContainer: {
+    width: screenWidth,
+    height: screenWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 45,
+    paddingRight: 0,
+  },
+});
+
+export default MusicPlayer;
+
+
+
+
+/*
+<MediaInfo
+  fullscreen={fullscreen}
+  item={item}
+  videoChannel={props.videoChannel}
+  videoTitle={props.videoTitle}
+/>
+<SliderMediaTrackContainer
+  fullscreen={fullscreen}
+  duration={this.state.duration}
+  currentTime={this.state.currentTime}
+  currentTimeWhenSliding={this.state.currentTimeWhenSliding}
+  slidingActive={this.state.slidingActive}
+  updateInfoTime={this.updateInfoTime}
+  onSlidingComplete={this.onSlidingComplete}
+  onSlidingStart={this.onSlidingStart}
+/>
+<ControlsContainer
+  isPaused={isPaused}
+  fullscreen={fullscreen}
+  toggleFullScreen={this.toggleFullScreen}
+  videoTitle={props.videoTitle}
+  item={item}
+  currentTime={this.state.currentTime}
+  duration={this.state.duration}
+  nextSong={this.nextSong}
+  seekSong={this.seekSong}
+  prevSong={this.prevSong}
+  animatedValue={this.animatedValue}
+  _animOnPressIn={this._animOnPressIn}
+  playPause={this.playPause}
+  videoChannel={props.videoChannel}
+/>
+<VolumeContainer
+  fullscreen={fullscreen}
+  volume={this.state.volume}
+/>
+*/

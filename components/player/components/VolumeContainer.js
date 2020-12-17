@@ -42,20 +42,20 @@ class VolumeContainer extends Component {
         const { volume } = this.state;
         return (
         <View style={fullscreen ? styles.fullscreenVolumeContainer : styles.doNotDisplay}>
-            <Icon name={"ios-volume-mute"} size={25} color={"white"} />
+            <Icon name={"ios-volume-mute"} size={25} color={"#333"} />
             <Slider
             style={{width:'80%',}}
             maximumValue={1}
             minimumValue={0}
             step={0.06666666666666667}
-            thumbTintColor={"snow"}
-            minimumTrackTintColor='snow'
-            maximumTrackTintColor='rgba(255, 255, 255, 0.25)'
+            thumbTintColor={"#333"}
+            minimumTrackTintColor='#333'
+            maximumTrackTintColor='rgba(0, 0, 0, 0.25)'
             trackStyle={{width:'100%', height:'7%'}}
             value={volume}
             onValueChange={this.sliderChange}
             />
-            <Icon name={"ios-volume-high"} size={25} color={"white"} />
+            <Icon name={"ios-volume-high"} size={25} color={"#333"} />
         </View>
         );
     }

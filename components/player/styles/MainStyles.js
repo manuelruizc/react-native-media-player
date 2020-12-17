@@ -1,13 +1,17 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('screen');
 
 export const styles = StyleSheet.create({
     playaContainer: {
         width: '100%',
-        height: '12%',
+        height: height * 0.10,
         justifyContent: 'space-around',
         alignItems: 'center',
-        backgroundColor:'#00007A',
-        borderTopRightRadius: 8, borderTopLeftRadius: 8,
+        backgroundColor:'rgba(0, 0, 0, 0.1)',
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
     },
     playaContainerFullScreen: {
       position:'absolute',
@@ -18,7 +22,6 @@ export const styles = StyleSheet.create({
       zIndex: 100,
       width: '100%',
       height: '100%',
-      backgroundColor: 'black',
       justifyContent: 'flex-start',
       alignItems: 'center'
     },
@@ -26,12 +29,12 @@ export const styles = StyleSheet.create({
         display: 'none'
     },
     fullScreenControlsContainer: {
-      width:'100%',
+      width,
       height: '100%',
       flexDirection:'row',
       alignItems:'center',
       justifyContent: 'flex-start',
-      paddingLeft: 12,
+      paddingLeft: 0,
     },
     fullScreenControlsContainerFullScreen: {
       width: '90%',

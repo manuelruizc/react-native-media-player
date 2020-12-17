@@ -123,21 +123,21 @@ class Playlists extends Component {
     render() {
         const { navigation } = this.props;
         const item = navigation.getParam('item', 'ERROR');
-        const myIcon = (<Icon name={"ios-more"} size={25} color={"white"} style={{padding:12}} />)
+        const myIcon = (<Icon name={"ios-more"} size={25} color={"#444"} style={{padding:12}} />)
 
       return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-start', backgroundColor: 'black', position:'relative' }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-start', backgroundColor: '#D3E0EC', position:'relative' }}>
             {this.state.modalOpen ? (<ModalPlaylists deletePlaylist={this.deletePlaylist} playlist={this.state.currentPL} closeModal={this.closeModalEdit} />) : false}
             <View style={{width:'100%', height:'18%', flexDirection:'row', alignItems:'flex-end', justifyContent:'space-between', paddingLeft:'5%', paddingRight:'5%',}}>
                 <View>
-                    <Text style={{color:'white', marginBottom:10, fontSize:13, fontWeight:'bold', color:'#D3D3D3'}}>DOWNLOADS</Text>
-                    <Text style={{color:'white', fontSize:20, marginBottom:10}}>Your playlists</Text>
+                    <Text style={{color:'#444', marginBottom:10, fontSize:13, fontWeight:'bold',}}>DOWNLOADS</Text>
+                    <Text style={{color:'#444', fontSize:20, marginBottom:10}}>Your playlists</Text>
                 </View>
                 <TouchableOpacity
                 style={{marginBottom:10}}
                 onPress={this.openModal}
                 >
-                    <Icon name={"ios-add-circle-outline"} size={28} color={"white"} />
+                    <Icon name={"ios-add-circle-outline"} size={28} color={"#444"} />
                 </TouchableOpacity>
             </View>
           {this.state.isLoadingLocalStorage ?
@@ -167,12 +167,12 @@ class Playlists extends Component {
             onRefresh={this._onRefresh}
           />
         }
-        style={{width:'100%', backgroundColor:'black'}}>
+        style={{width:'100%', backgroundColor:'#D3E0EC'}}>
             {this.state.playlists.map((play, index) => 
                 (
                 <TouchableOpacity onLongPress={play == "songsDownloadedOnDevice" ? false : () => this.openModalEdit(play)} onPress={() => this.props.navigation.navigate('PlaylistSongs', {key: play, comeFrom: 'Downloads'})} key={play} style={{backgroundColor:'#1A237E', width:'90%', marginLeft:'5%', height: 110, borderRadius: 13, overflow:'hidden', marginBottom:12, marginTop:12}}>
                     <ImageBackground style={{width:'100%', height:'100%'}} resizeMode={"cover"} source={{uri: play == "songsDownloadedOnDevice" ? this.state.downloadBackground : play === "favorites__Playlist" ? this.state.images[index%this.state.images.length] : this.getPlaylistBackground(play) ? this.getPlaylistBackground(play) : this.state.images[index%this.state.images.length]}} >
-                        <View style={{width:'100%', height:'100%', backgroundColor: 'rgba(0, 0, 0, 0.6)', position: 'absolute'}}>
+                        <View style={{width:'100%', height:'100%', backgroundColor: 'rgba(234,76,137, 0.45)', position: 'absolute'}}>
                             <Text style={{color:'white', fontSize:24, position:'absolute', top:10, left:20, fontWeight:'bold'}}>{play === "songsDownloadedOnDevice" ? "DOWNLOADS" : play === "favorites__Playlist" ? "FAVORITES" : play.toUpperCase()}</Text>
                         </View>
                     </ImageBackground>
@@ -419,7 +419,7 @@ class Playlists extends Component {
             console.log(error);
           }
     }
-  }
+}
 
   const styles = StyleSheet.create({
     modalActive: {

@@ -1,4 +1,5 @@
-import React, {Component} from 'react';
+/* eslint-disable prettier/prettier */
+import React, { Component, useRef, useState, useEffect } from 'react';
 import axios from 'react-native-axios';
 import RNFS from 'react-native-fs';
 import downloadManager from 'react-native-simple-download-manager';
@@ -11,110 +12,315 @@ import SplashScreen from './SplashScreen';
 import NetInfo from "@react-native-community/netinfo";
 import { songExists } from './helpers/localstorage/songExists';
 import {LogLevel, RNFFmpegConfig, RNFFmpeg, RNFFprobe} from 'react-native-ffmpeg';
-import { createInitialPaths, getSongsFromLocalStorage, createDefaultPlaylits } from './helpers/localstorage/saving';
-
+import {
+  createInitialPaths,
+  getSongsFromLocalStorage,
+  createDefaultPlaylits,
+  initialStorageSettings,
+  saveSongs,
+} from './helpers/localstorage/saving';
+import { initialServiceSetup } from './helpers/musicservices';
+import Icon from 'react-native-vector-icons/Ionicons';
+import FullPlayer from './components/player/components/players/FullPlayer';
+import SmallPlayer from './components/player/components/players/SmallPlayer';
+import { Provider, useDispatch, useSelector } from 'react-redux';
+import store from './redux/store/store';
+import { __togglePause, __togglePlayerFullscreen, __updateAllSongs, __updateCurrentPlaylistName, __updateCurrentVideo, __updateCurrentVideoIndex, __updateCurrentVideoItem, __updateCurrentVideoKey, __updateDownloadedSongsList, __updateDownloadingVideoKey, __updateImageURI, __updateIsDownloadingSong, __updateLastSearch, __updatePlaylistSource, __updateRelatedVideos, __updateSearchListActive, __updateSongProgress, __updateVideoChannel, __updateVideoList, __updateVideoListPlaylist, __updateVideoTitle } from './redux/actions/actionNames';
+// paused: true,
+// currentVideo: "https://r4---sn-0opoxu-hxmee.googlevideo.com/videoplayback?clen=4094846&requiressl=yes&key=cms1&txp=5511222&keepalive=yes&source=youtube&mime=audio%2Fwebm&ip=198.54.114.79&sparams=clen,dur,ei,expire,gir,id,ip,ipbits,ipbypass,itag,keepalive,lmt,mime,mip,mm,mn,ms,mv,pl,requiressl,source,usequic&id=o-AN_WkpC93qd3PsPjErSrLWTAKtZuASNIvBsBKDpCt1Wj&ei=yojDXKTjJdmYkwaO269Q&fvip=4&lmt=1540654186975365&c=WEB&gir=yes&dur=255.541&expire=1556340010&pl=51&ipbits=0&itag=251&ratebypass=yes&signature=48A796AFBD2B713B5EE804CDCB515F968636668D.0E93313E8F287675D0C945C7B998AF9511AFCDA7&redirect_counter=1&rm=sn-a5mkk7z&req_id=2a742d812695a3ee&cms_redirect=yes&ipbypass=yes&mip=2806:104e:19:5399:11ea:f81:d133:5baa&mm=31&mn=sn-0opoxu-hxmee&ms=au&mt=1556318332&mv=m&usequic=no",
+// downloadPath: `${RNFS.DocumentDirectoryPath}`,
+// playerOptions: {
+//   repeat: false,
+// },
+// currentVideoKey: "",
+// currentVideoIndex: 0,
+// musicPlayerFullScreen: false,
+// imageURI: 'https://i.ytimg.com/vi/13oXf68zRcM/maxresdefault.jpg',
+// videoTitle: "The Kiboomers - Kids Music Channel",
+// videoChannel: "Freeze Dance | Freeze Song | Freeze Dance for Kids | Music for Kids | The Kiboomers",
+// firstURI: "2UcZWXvgMZE",
+// videoIsDownloaded: false,
+// videoList: [],
+// videoListPlaylist: [],
+// playlistSource: [],
+// isLoadingSong: false,
+// isDownloadingSong: false,
+// searchListActive: false,
+// searched: false,
+// currentVideoItem: {imageURI: 'https://i.ytimg.com/vi/2UcZWXvgMZE/maxresdefault.jpg'},
+// isLoadingSearch: true,
+// downloadedSongsList: [],
+// downloadingVideoKey: [],
+// songProgress: 0,
+// lastSearch: "Bruno Mars",
+// currentPlaylistName: "",
+// allSongs: [],
+// relatedVideos: [],
 
 const AppContainer = createAppContainer(MyDrawerNavigator);
 
 const { width, height } = Dimensions.get('window');
 
-class App extends Component {
-  constructor(props){
-    super(props);
+const App = () => {
+  // Component State data
+  const [isAboutToActivate, setIsAboutToActivate] = useState(false);
+  const [loadingBubble, setLoadingBubble] = useState(true);
+  const [appIsConnected, setAppIsConnected] = useState(true);
+  const [splashScreenIsActive, setSplashScreenIsActive] = useState(true);
+  const [firstURI, setFirstURI] = useState('2UcZWXvgMZE')
+  // downloadPath: `${RNFS.DocumentDirectoryPath}`,
+  // ******
+  // playerOptions: {
+    //   repeat: false,
+    // },
+    // ****** PENDING
+    // firstURI: "2UcZWXvgMZE",
+    // *************
 
-    this.state = {
-      paused: true,
-      currentVideo: "https://r4---sn-0opoxu-hxmee.googlevideo.com/videoplayback?clen=4094846&requiressl=yes&key=cms1&txp=5511222&keepalive=yes&source=youtube&mime=audio%2Fwebm&ip=198.54.114.79&sparams=clen,dur,ei,expire,gir,id,ip,ipbits,ipbypass,itag,keepalive,lmt,mime,mip,mm,mn,ms,mv,pl,requiressl,source,usequic&id=o-AN_WkpC93qd3PsPjErSrLWTAKtZuASNIvBsBKDpCt1Wj&ei=yojDXKTjJdmYkwaO269Q&fvip=4&lmt=1540654186975365&c=WEB&gir=yes&dur=255.541&expire=1556340010&pl=51&ipbits=0&itag=251&ratebypass=yes&signature=48A796AFBD2B713B5EE804CDCB515F968636668D.0E93313E8F287675D0C945C7B998AF9511AFCDA7&redirect_counter=1&rm=sn-a5mkk7z&req_id=2a742d812695a3ee&cms_redirect=yes&ipbypass=yes&mip=2806:104e:19:5399:11ea:f81:d133:5baa&mm=31&mn=sn-0opoxu-hxmee&ms=au&mt=1556318332&mv=m&usequic=no",
-      downloadPath: `${RNFS.DocumentDirectoryPath}`,
-      playerOptions: {
-        repeat: false,
-      },
-      currentVideoKey: "",
-      currentVideoIndex: 0,
-      musicPlayerFullScreen: false,
-      imageURI: 'https://i.ytimg.com/vi/13oXf68zRcM/maxresdefault.jpg',
-      videoTitle: "Bruno Mars - Locked out of Heaven [Live in Paris]",
-      videoChannel: "Bruno Mars",
-      firstURI: "13oXf68zRcM",
-      videoIsDownloaded: false,
-      videoList: [],
-      videoListPlaylist: [],
-      playlistSource: [],
-      isLoadingSong: false,
-      isDownloadingSong: false,
-      searchListActive: false,
-      searched: false,
-      currentVideoItem: null,
-      splashScreenIsActive: true,
-      isAboutToActivate: false,
-      isLoadingSearch: true,
-      downloadedSongsList: [],
-      downloadingVideoKey: [],
-      sourceIsAudio: true,
-      appIsConnected: false,
-      songProgress: 0,
-      lastSearch: "Bruno Mars",
-      currentPlaylistName: "",
-      allSongs: [],
-      relatedVideos: [],
-      loading_bubble: true,
-    };
-    this.animation = new Animated.Value(0);
+
+
+  // App Store data
+  const paused = useSelector(state => state.paused);
+  const currentVideo = useSelector(state => state.currentVideo);
+  const currentVideoKey = useSelector(state => state.currentVideoKey);
+  const currentVideoIndex = useSelector(state => state.currentVideoIndex);
+  const musicPlayerFullScreen = useSelector(state => state.musicPlayerFullScreen);
+  const imageURI = useSelector(state => state.imageURI);
+  const videoTitle = useSelector(state => state.videoTitle);
+  const videoChannel = useSelector(state => state.videoChannel);
+  const videoIsDownloaded = useSelector(state => state.videoIsDownloaded);
+  const videoList = useSelector(state => state.videoList);
+  const videoListPlaylist = useSelector(state => state.videoListPlaylist);
+  const playlistSource = useSelector(state => state.playlistSource);
+  const isLoadingSong = useSelector(state => state.isLoadingSong);
+  const isDownloadingSong = useSelector(state => state.isDownloadingSong);
+  const searchListActive = useSelector(state => state.searchListActive);
+  const searched = useSelector(state => state.searched);
+  const currentVideoItem = useSelector(state => state.currentVideoItem);
+  const isLoadingSearch = useSelector(state => state.isLoadingSearch);
+  const downloadedSongsList = useSelector(state => state.downloadedSongsList);
+  const downloadingVideoKey = useSelector(state => state.downloadingVideoKey);
+  const songProgress = useSelector(state => state.songProgress);
+  const lastSearch = useSelector(state => state.lastSearch);
+  const currentPlaylistName = useSelector(state => state.currentPlaylistName);
+  const allSongs = useSelector(state => state.allSongs);
+  const sourceIsAudio = useSelector(state => state.sourceIsAudio);
+  const relatedVideos = useSelector(state => state.relatedVideos);
+
+  const animation = useRef(new Animated.Value(0)).current;
+  const dispatch = useDispatch();
+
+  // DISPATCH
+// 2
+  const changeVideoChannel = (payload) => {
+    dispatch({
+      type: __updateVideoChannel,
+      payload
+    })
   }
-  start_animation = () => {
+// 3
+  const changeVideoTitle = (payload) => {
+    dispatch({
+      type: __updateVideoTitle,
+      payload
+    })
+  }
+// 4
+  const changeCurrentVideoItem = (payload) => {
+    dispatch({
+      type: __updateCurrentVideoItem,
+      payload
+    });
+  }
+// 5
+  const changeSearchListStatus = (payload) => {
+    // this.setState({searchListActive: boolean});
+    dispatch({
+      type: __updateSearchListActive,
+      payload,
+    });
+  }
+// 6
+  const changeDownloadedSongsList = (payload) => {
+    dispatch({
+      type: __updateDownloadedSongsList,
+      payload
+    });
+  }
+// 7
+  const changeImageURI = (payload) => {
+    dispatch({
+      type: __updateImageURI,
+      payload
+    })
+  }
+// 8
+  const changeCurrentVideo = (payload) => {
+    dispatch({
+      type: __updateCurrentVideo,
+      payload
+    });
+  }
+// 9
+  const changeCurrentVideoKey = (payload) => {
+    dispatch({
+      type: __updateCurrentVideoKey,
+      payload
+    })
+  }
+// 10
+  const changeRelatedVideos = (payload) => {
+    dispatch({
+      type: __updateRelatedVideos,
+      payload
+    })
+  }
+// 11
+  const changeVideoList = (payload) => {
+    dispatch({
+      type: __updateVideoList,
+      payload
+    })
+  }
+// 14
+  const changePlaylistSource = (payload) => {
+    dispatch({
+      type: __updatePlaylistSource,
+      payload
+    })
+  }
+// 15
+  const changeVideoListPlaylist = (payload) => {
+    dispatch({
+      type: __updateVideoListPlaylist,
+      payload
+    })
+  };
+  // 16
+  const changeCurrentPlaylistName = (payload) => {
+    dispatch({
+      type: __updateCurrentPlaylistName,
+      payload
+    })
+  };
+
+// 17
+  const isDownloadingSongStatus = (payload, uri = "") => {
+    dispatch({
+      type: __updateIsDownloadingSong,
+      payload
+    })
+  }
+// 18
+  const changeCurrentVideoIndex = (payload) => {
+    dispatch({
+      type: __updateCurrentVideoIndex,
+      payload
+    })
+}
+// 19
+  const changeSongProgress = (payload) => {
+    dispatch({
+      type: __updateSongProgress,
+      payload
+    })
+  }
+// 20
+const togglePause = (payload = null) => {
+  console.log('payload', payload);
+  if(payload === null) {
+    console.log('hay payload');
+    return dispatch({
+      type: __togglePause
+    });
+  }
+  console.log('no hay payload');
+  dispatch({
+    type: __togglePause,
+    payload
+  });
+}
+// 21
+const toggleFullScreenMusicPlayer = () => {
+  dispatch({
+    type: __togglePlayerFullscreen,
+  })
+}
+
+const changeAllSongs = (payload) => {
+  dispatch({
+    type: __updateAllSongs,
+    payload
+  })
+}
+
+const changeDownloadingVideoKey = (payload) => {
+  dispatch({
+    type: __updateDownloadingVideoKey,
+    payload
+  })
+}
+
+const changeLastSearch = (payload) => {
+  dispatch({
+    type: __updateLastSearch,
+    payload
+  })
+}
+
+// 12
+  const changeIsLoadingSearch = (payload) => {
+    // check this....
+  }
+// 13
+  const changeVideoDownloadStatus = (bool) => {
+    // check this
+  }
+
+  const start_animation = () => {
     Animated.sequence([
-      Animated.delay(900),
-      Animated.spring(this.animation, {
+      Animated.delay(1000),
+      Animated.timing(animation, {
         toValue: 1,
-        friction: 40,
+        duration: 700,
         useNativeDriver: true,
       })
-    ]).start(() => this.setState({loading_bubble: false}));
+    ]).start(() => setLoadingBubble(false));
   }
-
-
 
 //SETUPS INICIALES
-
-  initialServiceSetup = () => {
-    const self = this;
-    MusicControl.enableBackgroundMode(true);
-    // MusicControl.handleAudioInterruptions(true);
-    MusicControl.on('play', ()=> {
-      self.playpause();
-    });
-
-    MusicControl.on('pause', ()=> {
-      self.playpause(true);
-    });
-
-    MusicControl.on('nextTrack', ()=> {
-      self.playNextSong();
-    });
-
-    MusicControl.on('previousTrack', ()=> {
-      self.playNextSong(true);
-    });
+  const initial_ = (object) => {
+    console.log('OBJECT inital_',object)
+    const { isDownloaded, channel, imageURI, title, uri, pathVideo, pathAudio, index } = object.currentVideoItem;
+    if(isDownloaded) {
+      // self.currentVideoURIChange(path);
+      // this.setState({currentVideo: sourceIsAudio ? pathAudio : pathVideo, paused: true});
+      // paused is true by default in initialState and sourceIsAlwaysAudio
+      changeCurrentVideoKey(uri);
+      changeVideoChannel(channel);
+      changeVideoTitle(title);
+      playNewSong(true, index);
+      // this.loadingState(false);
+      // this.changeVideoDownloadStatus(true);  check if this is used
+      changeSearchListStatus(false);
+      changeSplashState(lastSearch);
+    }
+    else {
+      getSavedSongData(object.currentVideoItem)
+      changeSearchListStatus(true);
+    }
   }
-
   
-   async componentDidMount() {
-
+  useEffect(async() => {
     await createInitialPaths();
 
-    const downloadedSongsList = getSongsFromLocalStorage();
-    this.initialServiceSetup();
-    const self = this;
+    const downloadedSongsList = await getSongsFromLocalStorage();
+    initialServiceSetup(togglePause, playNextSong);
     
 
     const listener = isConnected => {
       const connectionType = isConnected;
-      if(connectionType) {
-        this.setState({appIsConnected: true});
-      }
-      else {
-        this.setState({appIsConnected: false});
-      }
+      setAppIsConnected(connectionType ? true : false);
     };
     // Subscribe
     const subscription = NetInfo.isConnected.addEventListener('connectionChange', listener);
@@ -123,343 +329,196 @@ class App extends Component {
     // this.createDownloadsPlaylist();
     createDefaultPlaylits();
 
-    let status = false;
-
-    AsyncStorage.multiGet(["currentSong", "currentPlaylist", "Songs", "SourceIsAudio", "songProgress", "lastSearch", "currentVideoItem"], (err, stores) => {
-      stores.forEach((store, index) => {
-        if(index == 0) {
-          if(store[1]) {
-            const JSONified = JSON.parse(store[1]);
-            // let sourceIsAudio = stores[3][1];
-            // sourceIsAudio = JSON.parse(sourceIsAudio);
-            let sourceIsAudio = true //sourceIsAudio[0].sourceIsAudio;
-            console.log("LAST_SONG", JSONified)
-            self.setState({
-              imageURI: JSONified.image,
-              currentVideoIndex: JSONified.index,
-              currentVideoKey: JSONified.key,
-              currentVideo: sourceIsAudio ? JSONified.pathAudio : JSONified.pathVideo,
-              videoChannel: JSONified.videoChannel,
-              videoIsDownloaded: JSONified.videoIsDownloaded,
-              videoTitle: JSONified.videoTitle,
-              currentVideoItem: JSONified,
-            });
-          }
-        }
-        else if(index == 1) {
-          let response = store[1];
-          if(response !=  null) {
-            response = JSON.parse(response);
-            console.log("last playlist", response)
-            const source = response[0];
-            let playlist = response[1];
-            const currentPlaylistName = response[2];
-            if(source == "playlist") {
-              if(currentPlaylistName != "songsDownloadedOnDevice") {
-                playlist = playlist.filter(play => play.playlist.includes(currentPlaylistName))
-                playlist.sort(function(a, b) { 
-                  return a.playlistsIndex[currentPlaylistName] - b.playlistsIndex[currentPlaylistName];
-                });
-              }
-              console.log("PLEASE ME",playlist)
-              status = false;
-              self.setState({searchListActive: false, videoListPlaylist: playlist, playlistSource: source, currentPlaylistName});
-            }
-            else {
-              status = true;
-              self.setState({searchListActive: true, playlistSource: source, currentPlaylistName, videoListPlaylist: playlist, currentVideoIndex: 0,});
-            }
-          }
-        }
-        else if(index == 2) {
-          if(store[1] != null) {
-            let allSongs = store[1];
-            allSongs = JSON.parse(allSongs);
-            console.log('thats what i like',allSongs)
-            self.setState({allSongs})
-          }
-        }
-        else if(index == 3) {
-          if(store[1] != null) {
-            let sourceIsAudio = store[1];
-            sourceIsAudio = JSON.parse(sourceIsAudio);
-            sourceIsAudio = sourceIsAudio[0].sourceIsAudio;
-            sourceIsAudio ? self.setState({sourceIsAudio: true}) : self.setState({sourceIsAudio: false})
-          }
-        }
-        else if(index == 4) {
-          if(store[1] != null) {
-            let songProgress = Number(store[1]);
-            self.setState({songProgress});
-          }
-        }
-        else if(index == 5) {
-          if(store[1] != null) {
-            let lastSearch = String(store[1]);
-            self.setState({lastSearch});
-            NetInfo.getConnectionInfo().then(data => {
-              if(data.type == "unknown") {
-                this.setState({appIsConnected: false});
-                // this.changeSplashState(lastSearch);
-              }
-              else {
-                this.setState({appIsConnected: true});
-                // this.changeSplashState(lastSearch);
-              }
-            });
-          }
-          else {
-            NetInfo.getConnectionInfo().then(data => {
-              if(data.type == "unknown") {
-                this.setState({appIsConnected: false});
-                // this.changeSplashState(self.state.lastSearch);
-              }
-              else {
-                this.setState({appIsConnected: true});
-                // this.changeSplashState(self.state.lastSearch);
-              }
-            });
-          }
-        }
-        else if(index == 6) {
-          if(store[1] == null) {
-            self.getSavedSongData(null, true)
-            self.searchListStatus(true);
-            console.log("AQUI queeee")
-            return true;
-          }
-          let currentVideoItem = String(store[1]);
-          songData = JSON.parse(currentVideoItem);
-          let isAudioSource = JSON.parse(stores[3][1]);
-          isAudioSource = isAudioSource == null ? true :isAudioSource[0].sourceIsAudio;
-          const { isDownloaded, channel, imageURI, title, uri, pathVideo, pathAudio } = songData;
-          self.setState({currentVideoItem: songData}, () => {
-            if(isDownloaded) {
-              // self.currentVideoURIChange(path);
-              self.setState({currentVideo: isAudioSource ? pathAudio : pathVideo, paused: true});
-              self.currentVideoKeyChange(uri);
-              self.currentVideoURImage(imageURI);
-              self.changeVideoChannel(channel);
-              self.changeVideoTitle(title);
-              self.playNewSong(true, index);
-              self.loadingState(false);
-              self.changeVideoDownloadStatus(true);
-              self.changeCurrentVideoUpdate(songData); // dummy function
-              self.searchListStatus(false);
-              self.changeSplashState(self.state.lastSearch);
-            }
-            else {
-                self.changeCurrentVideoUpdate(songData); // dummy function
-                self.getSavedSongData(songData)
-                self.searchListStatus(status);
-            }
-          });
-        }
-      });
+    // CHECK THIS!!!!
+    const initial_storage_response = await initialStorageSettings();
+    if(initial_storage_response.length === 0) {
+      changeSplashState(lastSearch);
+      return true;
+    }
+    initial_storage_response.forEach((object, index) => {
+      // this.setState(object);
+      if(index === 0) {
+        setUpStorageDataToStoreCurrentVideo(object);
+      }
+      else if(index === 1) {
+        setUpStorageDataToStoreSearchListData(object);
+      }
+      else {
+        setUpStorageDataToStore(object);
+      }
+      if(index == initial_storage_response.length - 1) {
+        initial_(object);
+      }
     });
+    return true;
+  }, []);
+  
+  const setUpStorageDataToStore = (object) => {
+    const keys = Object.keys(object);
+    const values = Object.values(object);
+    console.log('OBJECT',object)
+    console.log(keys);
+    console.log(values);
+    let i = 0;
+    for(i; i < keys.length; i++) {
+      const currentKey = keys[i];
+      const currentValue = values[i];
+      console.log('currentKey', currentKey)
+      console.log('currentValue', currentValue)
+      if(currentKey === 'allSongs') {
+        changeAllSongs(currentValue);
+        continue;
+      }
+      else if(currentKey === 'songProgress') {
+        changeSongProgress(currentValue);
+        continue;
+      }
+      else if(currentKey === 'lastSearch') {
+        changeLastSearch(currentValue);
+        continue;
+      }
+    }
+  }
+
+  const setUpStorageDataToStoreSearchListData = (object) => {
+    const keys = Object.keys(object);
+    const values = Object.values(object);
+    console.log('OBJECT',object)
+    console.log(keys);
+    console.log(values);
+    let i = 0;
+    for(i; i < keys.length; i++) {
+      const currentKey = keys[i];
+      const currentValue = values[i];
+      console.log('currentKey', currentKey)
+      console.log('currentValue', currentValue)
+      if(currentKey === 'searchListActive') {
+        changeSearchListStatus(currentValue);
+        continue;
+      }
+      else if(currentKey === 'playlistSource') {
+        changePlaylistSource(currentValue);
+        continue;
+      }
+      else if(currentKey === 'currentPlaylistName') {
+        changeCurrentPlaylistName(currentValue);
+        continue;
+      }
+      else if(currentKey === 'videoListPlaylist') {
+        changeVideoListPlaylist(currentValue);
+        continue;
+      }
+      else if(currentKey === 'currentVideoIndex') {
+        changeCurrentVideoIndex(currentValue);
+        continue;
+      }
+    }
+  }
+  const setUpStorageDataToStoreCurrentVideo = (object) => {
+    const keys = Object.keys(object);
+    const values = Object.values(object);
+    console.log('OBJECT',object)
+    console.log(keys);
+    console.log(values);
+    let i = 0;
+    for(i; i < keys.length; i++) {
+      const currentKey = keys[i];
+      const currentValue = values[i];
+      console.log('currentKey', currentKey)
+      console.log('currentValue', currentValue)
+      if(currentKey === 'imageURI') {
+        changeImageURI(currentValue);
+        continue;
+      }
+      else if(currentKey === 'currentVideoIndex') {
+        changeCurrentVideoIndex(currentValue);
+        continue;
+      }
+      else if(currentKey === 'currentVideoKey') {
+        changeCurrentVideoKey(currentValue);
+        continue;
+      }
+      else if(currentKey === 'currentVideo') {
+        changeCurrentVideo(currentValue);
+        continue;
+      }
+      else if(currentKey === 'videoChannel') {
+        changeVideoChannel(currentValue);
+        continue;
+      }
+      else if(currentKey === 'videoIsDownloaded') {
+        
+        continue;
+      }
+      else if(currentKey === 'videoTitle') {
+        changeVideoTitle(currentValue);
+        continue;
+      }
+      else if(currentKey === 'currentVideoItem') {
+        changeCurrentVideoItem(currentValue);
+        continue;
+      }
+      
+    }
   }
   // TERMINAN SETUPS INICIALES
 
-  
-
-
-  render() {
-      const scale = this.animation.interpolate({inputRange:[0, 1], outputRange:[30, 0], extrapolate:'clamp'});
-      const opacity = this.animation.interpolate({inputRange:[0, 0.9, 1], outputRange:[1, 1, 0], extrapolate:'clamp'})
-      return(
-        <View style={{flex:1, backgroundColor:'#00007A', position:'relative'}}>
-          {this.state.splashScreenIsActive ?
-          (<SplashScreen upliftSplashState={this.upliftSplashState} isAboutToActivate={this.state.isAboutToActivate} />)
-          :
-          (
-            <View style={{flex:1, width:'100%'}}>
-              <AppContainer
-            screenProps={{
-            ...this.state,
-            downloadImage: this.downloadImage,
-            playpause: this.playpause,
-            paused: this.state.paused,
-            stop: this.stop,
-            currentVideoURIChange: this.currentVideoURIChange,
-            currentVideoKeyChange: this.currentVideoKeyChange,
-            currentVideoKey: this.state.currentVideoKey,
-            currentVideoIndexChange:this.currentVideoIndexChange,
-            currentVideoURImage: this.currentVideoURImage,
-            changeVideoChannel:this.changeVideoChannel,
-            changeVideoTitle:this.changeVideoTitle,
-            playNewSong: this.playNewSong,
-            setVideoList: this.setVideoList,
-            videoList: this.state.videoList,
-            togglePause: this.togglePause,
-            playNextSong: this.playNextSong,
-            isLoadingSong: this.state.isLoadingSong,
-            loadingState: this.loadingState,
-            playIndexSong: this.playIndexSong,
-            isDownloadingSong: this.state.isDownloadingSong,
-            isDownloadingSongStatus: this.isDownloadingSongStatus,
-            musicPlayerFullScreen: this.state.musicPlayerFullScreen,
-            musicPlayerHide: this.musicPlayerHide,
-            searchListStatus: this.searchListStatus,
-            setVideoListPlaylist: this.setVideoListPlaylist,
-            searchListActive: this.state.searchListActive,
-            videoListPlaylist: this.state.videoListPlaylist,
-            downloadSong: this.downloadSong,
-            changeVideoDownloadStatus: this.changeVideoDownloadStatus,
-            changeCurrentVideoUpdate: this.changeCurrentVideoUpdate,
-            updateLastPlaylist: this.updateLastPlaylist,
-            searched: this.state.searched,
-            changeSplashState: this.changeSplashState,
-            isLoadingSearch: this.state.isLoadingSearch,
-            loadingSearchStatus: this.loadingSearchStatus,
-            downloadedSongsList: this.downloadedSongsList,
-            getSongs: this.getSongs,
-            downloadingVideoKey: this.state.downloadingVideoKey,
-            setDownloadingVideoKey: this.setDownloadingVideoKey,
-            switchValue: this.state.sourceIsAudio,
-            changeSource: this.changeSource,
-            currentVideoItem: this.state.currentVideoItem,
-            appIsConnected: this.state.appIsConnected,
-            setLocalePlaylist: this.setLocalePlaylist,
-            setLastSearch: this.setLastSearch,
-            setSongProgress: this.setSongProgress,
-            updatePlaylistAfterDownload: this.updatePlaylistAfterDownload,
-            currentPlaylistName: this.state.currentPlaylistName,
-            addToAllSongs: this.addToAllSongs,
-            allSongs: this.state.allSongs,
-            updateRelatedVideos: this.updateRelatedVideos,
-          }} />
-
-          <MusicPlayer
-            appIsConnected={this.state.appIsConnected}
-            allSongs={this.state.allSongs}
-            addToPlaylist={this.addToPlaylist}
-            deleteSongFromPlaylist={this.deleteSongFromPlaylist}
-            currentPlaylistName={this.state.currentPlaylistName}
-            playlistSaved={this.state.videoListPlaylist}
-            searchListStatus={this.state.searchListActive}
-            playNextSongOnScroll={this.playNextSongOnScroll}
-            relatedVideos={this.state.relatedVideos}
-            paused={this.state.paused}
-            playpause={this.playpause}
-            currentVideoURIChange={this.currentVideoURIChange}
-            currentVideoIndexChange={this.currentVideoIndexChange}
-            currentVideoKeyChange={this.currentVideoKey}
-            currentVideo={this.state.currentVideo}
-            currentVideoIndex={this.state.currentVideoIndex}
-            currentVideoKey={this.state.currentVideoKey}
-            stop={this.stop}
-            musicPlayerFullScreen={this.state.musicPlayerFullScreen}
-            toggleFullScreenMusicPlayer={this.toggleFullScreenMusicPlayer}
-            imageURI={this.state.imageURI}
-            videoTitle={this.state.videoTitle}
-            videoChannel={this.state.videoChannel}
-            playNextSong={this.playNextSong}
-            videoIsDownloaded={this.state.videoIsDownloaded}
-            currentVideoItem={this.state.currentVideoItem}
-            downloadSong={this.downloadSong}
-            changeVideoDownloadStatus={this.changeVideoDownloadStatus}
-            enableMusicControls={this.enableMusicControls}
-            updateLastSongData={this.updateLastSongData}
-            downloadingVideoKey={this.state.downloadingVideoKey}
-            sourceIsAudio={this.state.sourceIsAudio}
-            setSongProgress={this.setSongProgress}
-            songProgress={this.state.songProgress}
-            state={this.state}
-            />
-            </View>
-          )
-          }
-          {(this.state.loading_bubble && !this.state.splashScreenIsActive) ?
-          (<Animated.View style={{position:'absolute', opacity, top:(height / 2) - 250, left: (width/2) - 250, width: 500, height: 500, borderRadius: 500, backgroundColor:'#4B4BFA', transform:[{scale}]}} />)
-        : null}
-        </View>
-      );
-  }
-
-  updateRelatedVideos = (relatedVideos) => {
-    this.setState({relatedVideos});
-  }
-
-  // ESTA BUSCANDO ? : EN EL ESTADO
-  loadingSearchStatus = (boolean) => {
-    this.setState({isLoadingSearch: boolean})
-  }
-
-  // INICIALIZAR LA PLAYLIST PARA DESCARGAS
-  // updated as a helper
-  createDownloadsPlaylist = () => {
-    
-  }
-
-  // CAMBIAR EL SOURCE ?AUDIO:VIDEO
-  changeSource = () => {
-    this.setState({sourceIsAudio: !this.state.sourceIsAudio}, () => {
-      const {sourceIsAudio} = this.state;
-      let objectSourceIsAudio = sourceIsAudio ? [{sourceIsAudio: true}] : [{sourceIsAudio: false}];
-      objectSourceIsAudio = JSON.stringify(objectSourceIsAudio);
-      AsyncStorage.setItem("SourceIsAudio", objectSourceIsAudio)
-      .then(function(response) {
-      })
-      .catch(function(error) {
-        console.log(error)
-      });
-    });
-  }
-
-  upliftSplashState = () => {
-    this.setState({splashScreenIsActive: false}, () => {
-      this.start_animation();
-    });
+  const upliftSplashState = () => {
+    setSplashScreenIsActive(false);
+    start_animation();
   }
 
   // CAMBIAR LA PANTALLA DE SPLASH AL APP Y REALIZA LA BÚSQUEDA DE CANCIONES
-  changeSplashState = (lastSearch) => {
-    const self = this;
-    const { appIsConnected } = this.state;
+  // check this
+  const changeSplashState = (lastSearch) => {
     if(!appIsConnected) {
-      this.setState({isAboutToActivate: true});
+      setIsAboutToActivate(true);
       return false;
     }
     axios.get(`http://tubeplaya.herokuapp.com/search/${lastSearch}/`)
       .then(function (response) {
-        songs = self.state.downloadedSongsList;
-        let videoList = null;
-        videoList = response.data.map((video, i) => {
+        songs = downloadedSongsList;
+        let tempVideoList = null;
+        videoList
+        tempVideoList = response.data.map((video, i) => {
           let isDownloaded = false;
           let path = "";
           songs.forEach(song => {
             if(video.uri == song.uri && song.isDownloaded) {
               isDownloaded = true;
-              path = self.state.sourceIsAudio ? song.pathAudio : song.pathVideo;
+              path = sourceIsAudio ? song.pathAudio : song.pathVideo;
             }
           });
           
           if(isDownloaded) {
             video["isDownloaded"] = true;
-            video[self.state.sourceIsAudio ? "pathAudio" : "pathVideo"] = path;
+            video[sourceIsAudio ? "pathAudio" : "pathVideo"] = path;
             return video
           }
           return video;
         });
-        self.setState({isAboutToActivate: true, videoList, isLoadingSearch: false});
+        // self.setState({isAboutToActivate: true, videoList, isLoadingSearch: false});
+        setIsAboutToActivate(true);
+        changeVideoList(tempVideoList);
+        changeIsLoadingSearch(false);
       })
       .catch(function (error) {
-        self.setState({isAboutToActivate: true})
+        setIsAboutToActivate(true);
       });
   }
 
   // LA CANCIÓN ACTUAL, GUARDAR LOS DATOS LOCALMENTE Y EN EL ESTADO
-  updateLastSongData = (data = null, index) => {
+  const updateLastSongData = (data = null, index) => {
     let currentSongData = {};
     if(data === null) {
       currentSongData = {
-        [this.state.sourceIsAudio ? "pathAudio" : "pathVideo"]: this.state.currentVideo,
-        key: this.state.currentVideoKey,
+        [sourceIsAudio ? "pathAudio" : "pathVideo"]: currentVideo,
+        key: currentVideoKey,
         index: index,
-        image: this.state.imageURI,
-        videoTitle: this.state.videoTitle,
-        videoChannel: this.state.videoChannel,
-        videoIsDownloaded: this.state.videoIsDownloaded  
+        image: imageURI,
+        videoTitle: videoTitle,
+        videoChannel: videoChannel,
+        videoIsDownloaded: videoIsDownloaded  
       }
     }
     else {
@@ -467,10 +526,9 @@ class App extends Component {
       currentSongData.index = index;
     }
     
-    this.setState({currentVideoItem: currentSongData});
+    changeCurrentVideoItem(currentSongData);
 
     currentSongData = JSON.stringify(currentSongData);
-
 
     AsyncStorage.multiSet([["currentSong", currentSongData], ["currentVideoItem", currentSongData]])
     .then(function(response) {
@@ -481,15 +539,16 @@ class App extends Component {
     });
   }
 
+  // me quede aquí
   // LO MISMO DE ARRIBA PERO CON PLAYLISTS
-  updateLastPlaylist = (playlist, source, playlistName) => {
-    playlistArray = [source, playlist, playlistName];
-    console.log("playlist array", playlistArray)
-    this.setState({playlistSource: source, videoListPlaylist: playlist, currentPlaylistName: playlistName}, () => {
-      console.log("STATE", this.state.videoListPlaylist);
-    });
+  const updateLastPlaylist = (playlist, source, playlistName) => {
+    let playlistArray = [source, playlist, playlistName];
+    changePlaylistSource(source);
+    changeVideoListPlaylist(playlist);
+    changeCurrentPlaylistName(playlistName);
     AsyncStorage.setItem("currentPlaylist", JSON.stringify(playlistArray))
     .then(function(response) {
+      console.log('saved currentPlaylist');
       console.log(response)
     })
     .catch(function(error) {
@@ -497,108 +556,39 @@ class App extends Component {
     });
   }
 
-  // IS SEARCHED ? :
-  changeSearchingStatus = (boolean) => {
-    this.setState({searched: boolean});
-  }
-
   
-  // STATUS DE VIDEOS DESCARGADOS ?????????????
-  changeVideoDownloadStatus = (bool) => {
-    this.setState({videoIsDownloaded: bool});
-  }
-
-  // NO SIRVE
-  changeCurrentVideoUpdate = (currentVideoItem) => {
-    
-  }
 
   // PAUSAR VIDEO
-  playpause = (paused = null) => {
-    const self = this;
-    if(paused === null) {
-      this.setState({paused: !this.state.paused}, () => {
-        self.updateMusicControls();
-        console.log(self.state.paused)
-      });
-    }
-    else {
-      this.setState({paused: true}, () => {
-        self.updateMusicControls();
-        console.log(self.state.paused)
-      });
-    }
+  const playpause = (paused = null) => {
+    alert("not using this, PLAYPAUSE");
   }
 
-  //PLAYLIST LOCAL ????????????
-  setLocalePlaylist = (downloadedSongsList) => {
-    this.setState({downloadedSongsList});
+  //PLAYLIST LOCAL ???????????? pending!!!
+  const setLocalePlaylist = (downloadedSongsList) => {
+    // this.setState({downloadedSongsList});
+    alert("not using this, SETLOCALEPLAYLIST");
   }
 
-  // ESCONDER REPRODUCTOR
-  musicPlayerHide = () => {
-    this.setState({musicPlayerFullScreen: false});
-  }
 
-  // ???
-  isDownloadingSongStatus = (boolean, uri = "") => {
-    this.setState({isDownloadingSong: boolean});
-  }
-
-  // OBETENER CANCIONES GUARDADAS EN PLAYLIST
-  // UPDATED AS HELPER
-  getSongs = () => {
-    const self = this;
-    AsyncStorage.multiGet(["Songs"], (err, stores) => {
-      let songs = stores[0][1];
-      songs = JSON.parse(songs);
-      if(songs != null) {
-        songs = songs.filter(song => song.isDownloaded);
-        self.setState({downloadedSongsList: songs});
-      }
-
-    });
-  }
-
-  
-
-  getSongsAndUpdate = () => {
-    const self = this;
+  const getSongsAndUpdate = () => {
     AsyncStorage.multiGet(["Songs"], (err, stores) => {
       let songs = stores[0][1];
       if(songs != null) {
         songs = JSON.parse(songs);
 
         songs = songs.filter(song => song.isDownloaded);
-        self.setState({downloadedSongsList: songs}, () => {
+        changeDownloadedSongsList(songs);
+        setVideoList(videoList);
+        // self.setState({downloadedSongsList: songs}, () => {
           
-          self.setVideoList(self.state.videoList);
-          self.isSongDownloaded();
-        });
+        //   self.setVideoList(self.state.videoList);
+        // });
       }
-
     });
   }
-
-  // ??????
-  isSongDownloaded = () => {
-    const self = this;
-    const songs = this.state.downloadedSongsList;
-    let answer = false;
-    for(let i = 0; i < songs.length; i++) {
-      if(songs[i].uri == this.state.currentVideoKey) {
-        answer = true;
-        break;
-      }
-    }
-
-    this.setState({videoIsDownloaded: answer});
-  }
-
-  // ==?????????
-  setVideoList = (vL) => {
-    const self = this;
-    const songs = this.state.downloadedSongsList
+  // ==????????? USING THIS WITH REDUX
+  const setVideoList = (vL) => {
+    const songs = downloadedSongsList
     let videoList = null;
     videoList = vL.map((video, i) => {
       let isDownloaded = false;
@@ -606,65 +596,45 @@ class App extends Component {
       songs.forEach(song => {
         if(video.uri == song.uri && song.isDownloaded) {
           isDownloaded = true;
-          path = this.state.sourceIsAudio ? song.pathAudio : song.pathVideo;
+          path = sourceIsAudio ? song.pathAudio : song.pathVideo;
         }
       });
       
       if(isDownloaded) {
         video["isDownloaded"] = true;
-        video[self.state.sourceIsAudio ? "pathAudio" : "pathVideo"] = path;
+        video[sourceIsAudio ? "pathAudio" : "pathVideo"] = path;
         return video
       }
       return video;
     });
-    this.setState({videoList});
+    // this.setState({videoList});
+    changeVideoList(videoList);
   }
 
-  // ?????
-  setVideoListPlaylist = (videoListPlaylist) => {
-    this.setState({videoListPlaylist});
-  }
 
-  // ?????
-  searchListStatus = (boolean) => {
-    this.setState({searchListActive: boolean});
-  }
 
-  // ????
-  loadingState = (isLoadingSong) => {
-    this.setState({isLoadingSong});
-  }
-
-  // ?????
-  playNewSong = (paused, index, songData = false) => {
-    this.updateMusicControls(true);
+  // ????? fixed ?
+  const playNewSong = (paused, index, songData = false) => {
+    console.log('i got a condo in manhattan')
+    updateMusicControls(true);
       if(songData != false) {
-        this.updateLastSongData(songData, index);
+        updateLastSongData(songData, index);
       }
-      this.setState({paused,});
-  }
-  
-  // ?????????????
-  togglePause = (paused = !this.state.paused) => {
-    this.setState({paused:paused});
+      togglePause(paused);
   }
 
-  
-  
-
-  playNextSongOnScroll = (ix, video, initialSong = false, isFromPlaylist = false) => {
-    const self = this;
-    console.log("video....", video)
-    console.log("ISFROM", isFromPlaylist)
+  const playNextSongOnScroll = (ix, video, initialSong = false, isFromPlaylist = false) => {
     const id = isFromPlaylist ? video.uri : video.id;
-    this.setState({isLoadingSong: true, currentVideoKey: id, songProgress: 0});
+    // this.setState({isLoadingSong: true, currentVideoKey: id, songProgress: 0});
+    changeCurrentVideoKey(id);
+    changeSongProgress(0);
     axios.get(`https://tubeplaya.herokuapp.com/video_info/${id}`)
     .then(function (response) {
-        let { relatedVideos } = self.state;
+      let tempRelatedVideos = relatedVideos;
       let isVisited = false;
-      if(relatedVideos.length > 0) {
-        for(let i = 0; i < relatedVideos.length; i++) {
-          const vid = relatedVideos[i];
+      if(tempRelatedVideos.length > 0) {
+        for(let i = 0; i < tempRelatedVideos.length; i++) {
+          const vid = tempRelatedVideos[i];
           if(vid.id === id) {
             if(vid.isVisited) {
               console.log("VISTO");
@@ -680,40 +650,34 @@ class App extends Component {
       }
 
       if(!isVisited) {
-        if(relatedVideos.length === 0) {
+        if(tempRelatedVideos.length === 0) {
           response.data.related_videos.slice(0, 2).forEach((video, index) => {
             if(index === 0) {
               video.isVisited = true;
             }
-            relatedVideos.push(video);
+            tempRelatedVideos.push(video);
           });
         }
         else {
           response.data.related_videos.slice(1, 2).forEach((video, index) => {
-            relatedVideos.push(video);
+            tempRelatedVideos.push(video);
           });
         }
       }
 
-        self.setState(
-          {
-            currentVideo: self.state.sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url,
-            currentVideoIndex: ix,
-            currentVideoKey: id,
-            imageURI: response.data.thumbnail,
-            isLoading:false,
-            // videoList: newStateVideos,
-            videoChannel: response.data.uploader,
-            videoTitle:response.data.title,
-            videoIsDownloaded: false,
-            relatedVideos,
-          }, () => {
-            self.setState({isLoadingSong: false,})
-          }
-        );
+      changeCurrentVideo(sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url);
+      changeCurrentVideoIndex(ix);
+      changeCurrentVideoKey(id);
+      changeImageURI(response.data.thumbnail);
+      changeVideoChannel(response.data.uploader);
+      changeVideoTitle(response.data.title);
+      changeRelatedVideos(tempRelatedVideos);
+      // changeVideoISD
+       //     videoIsDownloaded: false,
+      
 
         let currentSongData = {
-          [self.state.sourceIsAudio ? "pathAudio" : "pathVideo"]: self.state.sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url,
+          [sourceIsAudio ? "pathAudio" : "pathVideo"]: sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url,
           key: id,
           image: video.video_thumbnail,
           videoTitle: video.title,
@@ -721,7 +685,8 @@ class App extends Component {
           videoIsDownloaded: false,
           currentVideoIndex: ix,
         }
-        self.updateLastSongData(currentSongData, ix)
+        
+        updateLastSongData(currentSongData, ix)
         // self.updateLastPlaylist();
         
       })
@@ -730,48 +695,57 @@ class App extends Component {
       });
   }
   
-
   //????
-  playNextSong = (prev = null, dontPlay = false, index = null) => {
-    this.updateMusicControls(true);
+  const playNextSong = (prev = null, dontPlay = false, index = null, isPaused = null) => {
+    updateMusicControls(true);
 
-
-    const currentIndex = this.state.currentVideoIndex;
+    
+    const currentIndex = currentVideoIndex;
     let nextIndex = prev ? currentIndex - 1 : currentIndex + 1;
-    const vidl = this.state.playlistSource != "playlist" ? this.state.videoList : this.state.videoListPlaylist;
-    console.log("videolistsssssss", vidl)
-    const videoListLength = this.state.playlistSource != "playlist" ? vidl.length : vidl.length;
-    console.log(vidl, "perro",videoListLength);
-    let newIndex = !prev ? (nextIndex < videoListLength) ? nextIndex : 0 : (nextIndex < 0) ? videoListLength - 1 : nextIndex;
+    const vidl = playlistSource != "playlist" ? videoList : videoListPlaylist;
+    const videoListLength = playlistSource != "playlist" ? vidl.length : vidl.length;
+    let newIndex = prev ? currentIndex - 1 : currentIndex + 1 ;
+    newIndex = newIndex < 0 ? vidl.length - 1 : newIndex === vidl.length ? 0 : newIndex;
     if(index != null)
       newIndex = index;
-    if(newIndex === 0 && prev === null && index === null) this.setState({paused: true});
-    const videoInfo = this.state.playlistSource != "playlist" ? this.state.videoList[newIndex] : this.state.videoListPlaylist[newIndex];
-    const self = this;
-    const {isLoadingSong} = this.state;
+    // if(newIndex === 0 && prev === null && index === null)
 
-    console.log("federer", videoInfo)
+    const videoInfo = playlistSource != "playlist" ? videoList[newIndex] : videoListPlaylist[newIndex];
 
-    this.setState({isLoadingSong: true, currentVideoKey: videoInfo.uri, currentVideoIndex: nextIndex, songProgress: 0});
+    changeCurrentVideoKey(videoInfo.uri);
+    changeCurrentVideoIndex(nextIndex);
+    changeSongProgress(0);
+    let isSongPaused = (newIndex === 0 && prev === null && index === null) ? true : false;
+    if (isPaused != null) {
+      isSongPaused = isPaused;
+    }
+    console.log("mesisssisi", { currentIndex, nextIndex, vidl, videoListLength, newIndex, isSongPaused});
+    togglePause(isSongPaused);
+    // this.setState({isLoadingSong: true, currentVideoKey: videoInfo.uri, currentVideoIndex: nextIndex, songProgress: 0, }, () => {
+    //   let paused = (newIndex === 0 && prev === null && index === null) ? true : false;
+    //   setTimeout(() => {
+    //     self.setState({paused});
+    //   }, 1000);
+    // });
 
 
-    const currentList = this.state.playlistSource === "playlist" ? this.state.videoListPlaylist : this.state.videoList;
+    const currentList = playlistSource === "playlist" ? videoListPlaylist : videoList;
     const newStateVideos = currentList.map((vidio, i) => {
       if(currentIndex == i && !vidio.isPlaying) {
-        return {title: vidio.title, uri: vidio.uri, imageURI: vidio.imageURI, time: vidio.time, isPlaying: true, isDownloaded: vidio.isDownloaded, [this.state.sourceIsAudio ? "pathAudio" : "pathVideo"]: this.state.sourceIsAudio ? vidio.pathAudio : vidio.pathVideo};
+        return {title: vidio.title, uri: vidio.uri, imageURI: vidio.imageURI, time: vidio.time, isPlaying: true, isDownloaded: vidio.isDownloaded, [sourceIsAudio ? "pathAudio" : "pathVideo"]: sourceIsAudio ? vidio.pathAudio : vidio.pathVideo};
       }
       else {
-        return {title: vidio.title, uri: vidio.uri, imageURI: vidio.imageURI, time: vidio.time, isPlaying: false, isDownloaded: vidio.isDownloaded, [this.state.sourceIsAudio ? "pathAudio" : "pathVideo"]: this.state.sourceIsAudio ? vidio.pathAudio : vidio.pathVideo};
+        return {title: vidio.title, uri: vidio.uri, imageURI: vidio.imageURI, time: vidio.time, isPlaying: false, isDownloaded: vidio.isDownloaded, [sourceIsAudio ? "pathAudio" : "pathVideo"]: sourceIsAudio ? vidio.pathAudio : vidio.pathVideo};
       }
     });
-    if(this.state.searchListActive && !videoInfo.isDownloaded) {
+    if(searchListActive && !videoInfo.isDownloaded) {
       axios.get(`https://tubeplaya.herokuapp.com/video_info/${videoInfo.uri}`)
       .then(function (response) {
-        let { relatedVideos } = self.state;
+      let tempRelatedVideos = relatedVideos;
       let isVisited = false;
-      if(relatedVideos.length > 0) {
-        for(let i = 0; i < relatedVideos.length; i++) {
-          const vid = relatedVideos[i];
+      if(tempRelatedVideos.length > 0) {
+        for(let i = 0; i < tempRelatedVideos.length; i++) {
+          const vid = tempRelatedVideos[i];
           if(vid.id === videoInfo.uri) {
             if(vid.isVisited) {
               console.log("VISTO");
@@ -787,38 +761,46 @@ class App extends Component {
       }
 
       if(!isVisited) {
-        if(relatedVideos.length === 0) {
+        if(tempRelatedVideos.length === 0) {
           response.data.related_videos.slice(0, 2).forEach((video, index) => {
             if(index === 0) {
               video.isVisited = true;
             }
-            relatedVideos.push(video);
+            tempRelatedVideos.push(video);
           });
         }
         else {
           response.data.related_videos.slice(1, 2).forEach((video, index) => {
-            relatedVideos.push(video);
+            tempRelatedVideos.push(video);
           });
         }
       }
 
-        self.setState(
-          {
-            currentVideo: self.state.sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url,
-            currentVideoIndex: newIndex,
-            currentVideoKey: videoInfo.uri,
-            imageURI: response.data.thumbnail,
-            isLoading:false,
-            videoList: newStateVideos,
-            videoChannel: response.data.uploader,
-            videoTitle:response.data.title,
-            videoIsDownloaded: false,
-            relatedVideos,
-          }, () => {
-            this.setState({isLoadingSong: false,})
-          }
-        );
-        self.updateLastSongData(videoInfo, newIndex)
+      changeCurrentVideo(sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url);
+      changeCurrentVideoIndex(newIndex);
+      changeCurrentVideoKey(videoInfo.uri);
+      changeImageURI(response.data.thumbnail);
+      changeVideoList(newStateVideos);
+      changeVideoChannel(response.data.uploader);
+      changeVideoTitle(response.data.title);
+      changeRelatedVideos(tempRelatedVideos);
+      // self.setState(
+      //   {
+      //     currentVideo: self.state.sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url,
+      //     currentVideoIndex: newIndex,
+      //     currentVideoKey: videoInfo.uri,
+      //     imageURI: response.data.thumbnail,
+      //     isLoading:false,
+      //     videoList: newStateVideos,
+      //     videoChannel: response.data.uploader,
+      //     videoTitle:response.data.title,
+      //     videoIsDownloaded: false,
+      //     relatedVideos,
+      //   }, () => {
+      //     // self.setState({isLoadingSong: false,})
+      //   }
+      // );
+      updateLastSongData(videoInfo, newIndex)
         // self.updateLastPlaylist();
         
       })
@@ -828,31 +810,38 @@ class App extends Component {
     }
     else {
       if(videoInfo.isDownloaded) {
-        this.setState(
-          {
-            currentVideo: self.state.sourceIsAudio ? videoInfo.pathAudio : videoInfo.pathVideo,
-            currentVideoIndex: newIndex,
-            currentVideoKey: videoInfo.uri,
-            imageURI: videoInfo.imageURI,
-            isLoading:false,
-            videoChannel: videoInfo.channel,
-            videoTitle: videoInfo.title,
-            videoIsDownloaded: true
-          }, () => {
-            this.setState({isLoadingSong: false,})
-            self.updateLastSongData(videoInfo, newIndex)
-          }
-        );
+        changeCurrentVideo(sourceIsAudio ? videoInfo.pathAudio : videoInfo.pathVideo);
+        changeCurrentVideoIndex(newIndex);
+        changeCurrentVideoKey(videoInfo.uri);
+        changeImageURI(videoInfo.imageURI);
+        changeVideoChannel(videoInfo.channel);
+        changeVideoTitle(videoInfo.title);
+        updateLastSongData(videoInfo, newIndex)
+
+        // this.setState(
+        //   {
+        //     currentVideo: self.state.sourceIsAudio ? videoInfo.pathAudio : videoInfo.pathVideo,
+        //     currentVideoIndex: newIndex,
+        //     currentVideoKey: videoInfo.uri,
+        //     imageURI: videoInfo.imageURI,
+        //     isLoading:false,
+        //     videoChannel: videoInfo.channel,
+        //     videoTitle: videoInfo.title,
+        //     videoIsDownloaded: true
+        //   }, () => {
+        //     // self.setState({isLoadingSong: false,})
+        //   }
+        // );
         
       }
       else {
         axios.get(`https://tubeplaya.herokuapp.com/video_info/${videoInfo.uri}`)
         .then(function (response) {
-          let { relatedVideos } = self.state;
+          let tempRelatedVideos = relatedVideos;
           let isVisited = false;
-          if(relatedVideos.length > 0) {
-            for(let i = 0; i < relatedVideos.length; i++) {
-              const vid = relatedVideos[i];
+          if(tempRelatedVideos.length > 0) {
+            for(let i = 0; i < tempRelatedVideos.length; i++) {
+              const vid = tempRelatedVideos[i];
               if(vid.id === videoInfo.uri) {
                 if(vid.isVisited) {
                   console.log("VISTO");
@@ -868,38 +857,46 @@ class App extends Component {
           }
     
           if(!isVisited) {
-            if(relatedVideos.length === 0) {
+            if(tempRelatedVideos.length === 0) {
               response.data.related_videos.slice(0, 2).forEach((video, index) => {
                 if(index === 0) {
                   video.isVisited = true;
                 }
-                relatedVideos.push(video);
+                tempRelatedVideos.push(video);
               });
             }
             else {
               response.data.related_videos.slice(1, 2).forEach((video, index) => {
-                relatedVideos.push(video);
+                tempRelatedVideos.push(video);
               });
             }
           }
 
-          self.setState(
-            {
-              currentVideo: self.state.sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url,
-              currentVideoIndex: newIndex,
-              currentVideoKey: videoInfo.uri,
-              imageURI: response.data.thumbnail,
-              isLoading:false,
-              videoList: newStateVideos,
-              videoChannel: response.data.uploader,
-              videoTitle:response.data.title,
-              videoIsDownloaded: false,
-              relatedVideos,
-            }, () => {
-              this.setState({isLoadingSong: false,})
-              self.updateLastSongData(videoInfo, newIndex)
-            }
-          );
+          changeCurrentVideo(sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url);
+          changeCurrentVideoIndex(newIndex);
+          changeCurrentVideoKey(videoInfo.uri);
+          changeImageURI(response.data.thumbnail);
+          changeVideoTitle(responese.data.title);
+          changeVideoChannel(response.data.channel);
+          changeRelatedVideos(tempRelatedVideos);
+          changeVideoList(newStateVideos);
+          updateLastSongData(videoInfo, newIndex)
+          // self.setState(
+          //   {
+          //     currentVideo: self.state.sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url,
+          //     currentVideoIndex: newIndex,
+          //     currentVideoKey: videoInfo.uri,
+          //     imageURI: response.data.thumbnail,
+          //     isLoading:false,
+          //     videoList: newStateVideos,
+          //     videoChannel: response.data.uploader,
+          //     videoTitle:response.data.title,
+          //     videoIsDownloaded: false,
+          //     relatedVideos,
+          //   }, () => {
+          //     // self.setState({isLoadingSong: false,})
+          //   }
+          // );
         })
         .catch(function (error) {
           console.log(error);
@@ -908,30 +905,27 @@ class App extends Component {
     }
   }
 
-  getSavedSongData = (songData, uriSearch = false) => {
-    const { appIsConnected } = this.state;
+  const getSavedSongData = (songData, uriSearch = false) => {
+    console.log("songData", songData);
     if(!appIsConnected) {
-      this.changeSplashState(this.state.lastSearch);
+      changeSplashState(lastSearch);
       return false;
     }
-    console.log("CAIN VELASQUEZ");
-    const self = this;
     let urii = null;
-
+    
     if(songData != null)
       urii = songData.key === undefined ? songData.uri : songData.key;
-    const uri = uriSearch ? self.state.firstURI : urii;
+    const uri = uriSearch ? firstURI : urii;
     console.log("songData", songData);
     axios.get(`https://tubeplaya.herokuapp.com/video_info/${uri}`)
     .then(function (response) {
-      let { relatedVideos } = self.state;
       let isVisited = false;
-      if(relatedVideos.length > 0) {
-        for(let i = 0; i < relatedVideos.length; i++) {
-          const vid = relatedVideos[i];
+      let tempRelatedVideos = relatedVideos;
+      if(tempRelatedVideos.length > 0) {
+        for(let i = 0; i < tempRelatedVideos.length; i++) {
+          const vid = tempRelatedVideos[i];
           if(vid.id === uri) {
             if(vid.isVisited) {
-              console.log("VISTO");
               isVisited = true;
               break;
             }
@@ -944,60 +938,47 @@ class App extends Component {
       }
 
       if(!isVisited) {
-        if(relatedVideos.length === 0) {
+        if(tempRelatedVideos.length === 0) {
           response.data.related_videos.slice(0, 2).forEach((video, index) => {
             if(index === 0) {
               video.isVisited = true;
             }
-            relatedVideos.push(video);
+            tempRelatedVideos.push(video);
           });
         }
         else {
           response.data.related_videos.slice(1, 2).forEach((video, index) => {
-            relatedVideos.push(video);
+            tempRelatedVideos.push(video);
           });
         }
       }
 
-      console.log("SEMIDISI", relatedVideos)
-      self.setState(
-        {
-          currentVideo: self.state.sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url,
-          currentVideoKey: uri,
-          imageURI: response.data.thumbnail,
-          isLoading:false,
-          videoChannel: response.data.uploader,
-          videoTitle:response.data.title,
-          paused: true,
-          relatedVideos,
-          searchListActive: true,
-        }, () => {
-          {
-            self.setState({isLoadingSong: false,})
-            self.changeSplashState(self.state.lastSearch);
-          }
-        }
-      );
+      changeCurrentVideo(sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url);
+      changeCurrentVideoKey(uri);
+      changeImageURI(response.data.thumbnail);
+      changeVideoChannel(response.data.uploader);
+      changeVideoTitle(response.data.title)
+      togglePause(true);
+      changeRelatedVideos(tempRelatedVideos);
+      changeSearchListStatus(true);
+      changeSplashState(lastSearch);
     })
     .catch(function (error) {
-      self.changeSplashState(self.state.lastSearch);
+      changeSplashState(lastSearch);
     });
   }
 
+  const playIndexSong = (newIndex, songData, playlist = null, isFromPlaylist = false, playlistLL = null) => {
+    const currentIndex = currentVideoIndex;
+    const videoListLength = isFromPlaylist ? videoListPlaylist.length : videoList.length;
+    const videoInfo = isFromPlaylist ? playlistLL[newIndex] : videoList[newIndex];
+    
+    changeCurrentVideoKey(videoInfo.uri);
+    // this.setState({isLoadingSong: true, currentVideoKey:videoInfo.uri});
 
-  playIndexSong = (newIndex, songData, playlist = null, isFromPlaylist = false, playlistLL = null) => {
-    const {searchListActive} = this.state; 
-    const currentIndex = this.state.currentVideoIndex;
-    const videoListLength = isFromPlaylist ? this.state.videoListPlaylist.length : this.state.videoList.length;
-    const videoInfo = isFromPlaylist ? playlistLL[newIndex] : this.state.videoList[newIndex];
-    const self = this;
-    const {isLoadingSong} = this.state;
-    this.setState({isLoadingSong: true, currentVideoKey:videoInfo.uri});
+    console.log({fedd: videoInfo, isFromPlaylist, videoListPlaylist: playlistLL, videoList: videoList});
 
-    console.log("PLEASE MEEEEE")
-    console.log({fedd: videoInfo, isFromPlaylist, videoListPlaylist: playlistLL, videoList: this.state.videoList})
-
-    let newStateVideos = this.state.videoList.map((vidio, i) => {
+    let newStateVideos = videoList.map((vidio, i) => {
       if(currentIndex == i && !vidio.isPlaying) {
         return {title: vidio.title, uri: vidio.uri, time: vidio.time, isPlaying: true};
       }
@@ -1010,11 +991,11 @@ class App extends Component {
 
     axios.get(`https://tubeplaya.herokuapp.com/video_info/${videoInfo.uri}`)
     .then(function (response) {
-      let { relatedVideos } = self.state;
+      let tempRelatedVideos = relatedVideos;
       let isVisited = false;
-      if(relatedVideos.length > 0) {
-        for(let i = 0; i < relatedVideos.length; i++) {
-          const vid = relatedVideos[i];
+      if(tempRelatedVideos.length > 0) {
+        for(let i = 0; i < tempRelatedVideos.length; i++) {
+          const vid = tempRelatedVideos[i];
           if(vid.id === videoInfo.uri) {
             if(vid.isVisited) {
               console.log("VISTO");
@@ -1030,38 +1011,50 @@ class App extends Component {
       }
 
       if(!isVisited) {
-        if(relatedVideos.length === 0) {
+        if(tempRelatedVideos.length === 0) {
           response.data.related_videos.slice(0, 2).forEach((video, index) => {
             if(index === 0) {
               video.isVisited = true;
             }
-            relatedVideos.push(video);
+            tempRelatedVideos.push(video);
           });
         }
         else {
           response.data.related_videos.slice(1, 2).forEach((video, index) => {
-            relatedVideos.push(video);
+            tempRelatedVideos.push(video);
           });
         }
       }
 
-      self.setState(
-        {
-          currentVideo: self.state.sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url,
-          // currentVideoIndex: newIndex,
-          currentVideoKey: videoInfo.uri,
-          imageURI: response.data.thumbnail,
-          isLoading:false,
-          videoList: newStateVideos,
-          videoChannel: response.data.uploader,
-          videoTitle:response.data.title,
-          paused: false,
-          relatedVideos,
-        }, () =>{
-          self.setState({currentVideoItem: videoInfo, isLoadingSong: false,});
-          self.updateLastSongData(videoInfo, newIndex);
-        }
-      );
+      changeCurrentVideo(sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url);
+      // changeCurrentVideoIndex(newIndex);
+      changeCurrentVideoKey(videoInfo.uri);
+      changeImageURI(response.data.thumbnail);
+      changeVideoList(newStateVideos);
+      changeVideoChannel(response.data.uploader);
+      changeVideoTitle(response.data.title);
+      togglePause(false);
+      changeRelatedVideos(tempRelatedVideos);
+
+      changeCurrentVideoIndex(videoInfo);
+      updateLastSongData(videoInfo, newIndex);
+      // self.setState(
+      //   {
+      //     currentVideo: self.state.sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url,
+      //     // currentVideoIndex: newIndex,
+      //     currentVideoKey: videoInfo.uri,
+      //     imageURI: response.data.thumbnail,
+      //     isLoading:false,
+      //     videoList: newStateVideos,
+      //     videoChannel: response.data.uploader,
+      //     videoTitle:response.data.title,
+      //     paused: false,
+      //     relatedVideos,
+      //   }, () =>{
+      //     self.setState({currentVideoItem: videoInfo, });
+      //     updateLastSongData(videoInfo, newIndex);
+      //   }
+      // );
     })
     .catch(function (error) {
       console.log(error);
@@ -1069,40 +1062,22 @@ class App extends Component {
 
   }
   
-  changeVideoChannel = (videoChannel) => {
-    this.setState({videoChannel});
-  }
-
-  changeVideoTitle = (videoTitle) => {
-    this.setState({videoTitle});
-  }
-
-  currentVideoURImage = (imageURI) => {
-    this.setState({imageURI});
-  }
-
-  toggleFullScreenMusicPlayer = () => {
-    this.setState({musicPlayerFullScreen: !this.state.musicPlayerFullScreen});
-  }
-
-  stop = () => {
-    console.log(this.state.paused);
-    this.setState({paused: true}, () => console.log(this.state.paused));
-  }
-
-  setSongProgress = (seconds, willSave = true) => {
-    this.setState({songProgress: seconds});
-    console.log('POLLO', willSave)
+  // THIS IS A HELPER FUNCTION
+  const setSongProgress = (seconds, willSave = true) => {
+    // this.setState({songProgress: seconds});
+    changeSongProgress(seconds);
+    console.log('willSaveSongProgress', willSave)
     if(!willSave) return true;
-    console.log('POLLO', willSave)
+    console.log('saving is true', willSave)
     AsyncStorage.setItem("songProgress", String(seconds))
     .then(response => {
-      console.log('ITS SHOWTIME' ,response)
+      console.log('callback songProgress' ,response)
     })
     .catch((e) => console.log(e));
   }
-
-  setLastSearch = (lastSearch) => {
+  
+  // THIS IS A HELPER FUNCTION
+  const setLastSearch = (lastSearch) => {
     AsyncStorage.setItem("lastSearch", String(lastSearch))
     .then(response => {
       console.log(response)
@@ -1110,28 +1085,16 @@ class App extends Component {
     .catch((e) => console.log(e));
   }
 
-  currentVideoURIChange = (currentVideo) => {
-    this.setState({currentVideo})
-  }
-
-  currentVideoKeyChange = (currentVideoKey) => {
-    this.setState({currentVideoKey})
-  }
-
-  currentVideoIndexChange = (currentVideoIndex) => {
-    console.log("currentVideoIndex", currentVideoIndex)
-    this.setState({currentVideoIndex});
-  }
-
-  songIsInPlaylists = (id, value) => {
+  const songIsInPlaylists = (id, value) => {
     value = JSON.parse(value);
     const result = value.filter(val => val.uri === id);
   }
   
-  downloadImage = async (fromUrl, id) => {
+  // CHANGE IT TO ASYNC (AWAIT)
+  const downloadImage = async (fromUrl, id) => {
     try {
-      console.log("FROMURL", fromUrl);
-      console.log("id", id);
+      console.log("IMAGE FROM THIS URL", fromUrl);
+      console.log("id___", id);
       RNFS.downloadFile({
         fromUrl,
         toFile: `file:///storage/emulated/0/Android/data/com.muustube/files/Images/${id}.png`,
@@ -1142,30 +1105,24 @@ class App extends Component {
     catch(error) {
       console.log(error);
     }
-}
+  }
 
-  downloadSong = async(item, currentArtist = false, currentSong = false) => {
-    // let path_name = "file:///storage/emulated/0/Android/data/com.muustube/files/Download/";
-    // let path_imgs = "file:///storage/emulated/0/Android/data/com.muustube/files/Images/";
-
-    // await RNFS.mkdir(path_name);
-    // await RNFS.mkdir(path_imgs);
+  const downloadSong = async (item, currentArtist = false, currentSong = false) => {
     let {channel, uri, imageURI, playlist, time, title} = item;
     let timeInSeconds = time.length <= 5 ? Number(time.substring(0, time.length - 3)) : 100;
     channel = channel === undefined ? "unknown" : channel;
     let newSongsArray = [];
-    const self = this;
-    const { sourceIsAudio } = this.state;
     const extension = sourceIsAudio ? ".mp4" : ".mp4";
     try {
       let newSongs = await AsyncStorage.getItem('Songs');
       if(newSongs == null) {
-        self.isDownloadingSongStatus(true, uri);
+        isDownloadingSongStatus(true, uri);
         axios.get(`https://tubeplaya.herokuapp.com/video_info/${uri}`)
         .then(function (response) {
-          let {downloadingVideoKey} = self.state;
-          downloadingVideoKey.push(uri);
-          self.setState({downloadingVideoKey});
+          let tempDownloadingVideoKey = downloadingVideoKey;
+          tempDownloadingVideoKey.push(uri);
+          // self.setState({downloadingVideoKey});
+          changeDownloadingVideoKey(tempDownloadingVideoKey);
           // media current format
           let url = sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url
           url = timeInSeconds > 13 ? response.data.formats[3].url : url;
@@ -1175,7 +1132,7 @@ class App extends Component {
             playlists = JSON.stringify(playlists);
             AsyncStorage.setItem("Playlists", playlists)
             .then(asyncalive => {
-              self.isDownloadingSongStatus(false);
+              isDownloadingSongStatus(false);
               const pathObjectName = sourceIsAudio ? "pathAudio" : "pathVideo";
               const isObjectMedia = sourceIsAudio ? "isAudio" : "isVideo";
 
@@ -1185,7 +1142,7 @@ class App extends Component {
               let songs = [songObject];
 
               if(imageURI != `file:///storage/emulated/0/Android/data/com.muustube/files/Images/${uri}.png`) {
-                self.downloadImage(thumbnail, uri);
+                downloadImage(thumbnail, uri);
                 songObject.imageURI = `file:///storage/emulated/0/Android/data/com.muustube/files/Images/${uri}.png`;
               }
 
@@ -1195,10 +1152,10 @@ class App extends Component {
                   console.log(result)
                   if(result.rc === 0) {
                     songObject[pathObjectName] = `file:///storage/emulated/0/Android/data/com.muustube/files/Download/${songObject.uri}.mp3`;
-                    self.saveSongInLocalStorage(songObject, uri);
+                    saveSongInLocalStorage(songObject, uri);
                   }
                   else {
-                    self.deleteFromQueue(uri);
+                    deleteFromQueue(uri);
                     ToastAndroid.showWithGravity(
                       "Video not available in your region",
                       ToastAndroid.SHORT,
@@ -1208,7 +1165,7 @@ class App extends Component {
                 });     
               }
               else {
-                self.saveSongInLocalStorage(songObject, uri);
+                saveSongInLocalStorage(songObject, uri);
               }
 
           })
@@ -1216,7 +1173,7 @@ class App extends Component {
         });
       }
       else {
-        self.isDownloadingSongStatus(true, uri);
+        isDownloadingSongStatus(true, uri);
         const songIsSaved = songExists(newSongs, uri, sourceIsAudio);
         
         if(songIsSaved === "Already downloaded") return false;
@@ -1226,9 +1183,11 @@ class App extends Component {
 
         axios.get(`https://tubeplaya.herokuapp.com/video_info/${uri}`)
         .then(function (response) {
-          let {downloadingVideoKey} = self.state;
-          downloadingVideoKey.push(uri);
-          self.setState({downloadingVideoKey});
+          console.log("HEEERERERE")
+          let tempDownloadingKey = downloadingVideoKey;
+          tempDownloadingKey.push(uri);
+          changeDownloadingVideoKey(tempDownloadingKey);
+          // self.setState({downloadingVideoKey});
           
           // media current format
           let url = sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url
@@ -1236,7 +1195,7 @@ class App extends Component {
           const thumbnail = response.data.thumbnail;
           let songObject = {};
           
-          self.isDownloadingSongStatus(false);
+          isDownloadingSongStatus(false);
           
           //  songObject = {};
           let isAlreadyInPlaylist = false;
@@ -1275,22 +1234,22 @@ class App extends Component {
               songObject[pathObjectName] = `${response.reason}`;
             }
             if(imageURI != `file:///storage/emulated/0/Android/data/com.muustube/files/Images/${uri}.png`) {
-              self.downloadImage(thumbnail, uri);
+              downloadImage(thumbnail, uri);
               songObject.imageURI = `file:///storage/emulated/0/Android/data/com.muustube/files/Images/${uri}.png`;
             }
-
             if(sourceIsAudio) {
-
+              
+              console.log("jugo", url)
               RNFFmpeg.execute(`-i ${url} file:///storage/emulated/0/Android/data/com.muustube/files/Download/${songObject.uri}.mp3`).then(result => {
                 console.log(result)
                 if(result.rc === 0) {
                   songObject[pathObjectName] = `file:///storage/emulated/0/Android/data/com.muustube/files/Download/${songObject.uri}.mp3`;
                   playlistSongs.push(songObject);
                   playlistSongs = JSON.stringify(playlistSongs);
-                  self.saveSongInLocalStorage(songObject, uri, isAlreadyInPlaylist);
+                  saveSongInLocalStorage(songObject, uri, isAlreadyInPlaylist);
                 }
                 else {
-                  self.deleteFromQueue(uri);
+                  deleteFromQueue(uri);
                   ToastAndroid.showWithGravity(
                     "Video not available in your region",
                     ToastAndroid.SHORT,
@@ -1300,7 +1259,7 @@ class App extends Component {
               });     
             }
             else {
-              self.saveSongInLocalStorage(songObject, uri);
+              saveSongInLocalStorage(songObject, uri);
             }
       });
 
@@ -1312,21 +1271,33 @@ class App extends Component {
     }
   }
 
-  setDownloadingVideoKey = (downloadingVideoKey) => {
-    this.setState({downloadingVideoKey});
+  
+
+  const deleteFromQueue = (uri) => {
+    let tempDownloadingVideoKey = downloadingVideoKey;
+    tempDownloadingVideoKey = tempDownloadingVideoKey.filter(dld => dld != uri);
+    // this.setState({downloadingVideoKey});
+    changeDownloadingVideoKey(tempDownloadingVideoKey);
   }
 
-  deleteFromQueue = (uri) => {
-    let {downloadingVideoKey} = this.state;
-    downloadingVideoKey = downloadingVideoKey.filter(dld => dld != uri);
-    this.setState({downloadingVideoKey});
+  const saveSongInLocalStorage = async (songObject, uri, isAlreadyInPlaylist = false) => {
+    let allSongs = await saveSongs(songObject, isAlreadyInPlaylist);
+
+    updatePlaylistAfterDownload(allSongs);
+    addToAllSongs(allSongs);
+    allSongs = JSON.stringify(allSongs);
+
+    AsyncStorage.setItem("Songs", allSongs)
+    .then(res => {
+      deleteFromQueue(uri);
+      getSongsAndUpdate();
+    })
+    .catch(error => console.log(error))
   }
 
-  updatePlaylistAfterDownload = (songs = null) => {
-    const self = this;
+  const updatePlaylistAfterDownload = (songs = null) => {
     if(songs == null) {
       AsyncStorage.getItem("Songs", (e, result) => {
-        const { currentPlaylistName } = self.state;
         songs = JSON.parse(result);
         let videoListPlaylist = songs.filter(song => song.playlist.includes(currentPlaylistName));
         if(currentPlaylistName != "songsDownloadedOnDevice") {
@@ -1334,198 +1305,36 @@ class App extends Component {
             return a.playlistsIndex[currentPlaylistName] - b.playlistsIndex[currentPlaylistName];
           });
         }
-        self.updateLastPlaylist(songs, "playlist", currentPlaylistName);
-        self.setState({videoListPlaylist})
+        updateLastPlaylist(songs, "playlist", currentPlaylistName);
+        // self.setState({videoListPlaylist})
+        changeVideoListPlaylist(videoListPlaylist);
       });
     }
     else {
-      const { currentPlaylistName } = self.state;
       let videoListPlaylist = songs.filter(song => song.playlist.includes(currentPlaylistName));
       if(currentPlaylistName != "songsDownloadedOnDevice") {
         videoListPlaylist.sort(function(a, b) { 
           return a.playlistsIndex[currentPlaylistName] - b.playlistsIndex[currentPlaylistName];
         });
       }
-      self.updateLastPlaylist(songs, "playlist", currentPlaylistName);
-      self.setState({videoListPlaylist})
+      updateLastPlaylist(songs, "playlist", currentPlaylistName);
+      // self.setState({videoListPlaylist})
+      changeVideoListPlaylist(videoListPlaylist);
     }
     console.log("PLAYList AL CIEN")
   }
 
-  saveSongInLocalStorage = async (songObject, uri, isAlreadyInPlaylist = false) => {
-    const self = this;
-    AsyncStorage.getItem("Songs", (e, result) => {
-      let allSongs = result;
-      if(result != null) {
-        allSongs = JSON.parse(allSongs);
-        if(isAlreadyInPlaylist) {
-          allSongs = allSongs.filter(songs => songs.uri != songObject.uri);
-        }
-        allSongs.push(songObject);
-      }
-      else {
-        allSongs = [songObject];
-      }
-      
+  
 
-      self.updatePlaylistAfterDownload(allSongs);
-      self.addToAllSongs(allSongs);
-      allSongs = JSON.stringify(allSongs);
-
-      AsyncStorage.setItem("Songs", allSongs)
-      .then(res => {
-        self.deleteFromQueue(uri);
-        self.getSongsAndUpdate();
-      })
-      .catch(error => console.log(error))
-
-    });
+  const addToAllSongs = (allSongs) => {
+    changeAllSongs(allSongs);
   }
 
-  addToAllSongs = (allSongs) => {
-    this.setState({allSongs});
-  }
-
-  deleteSongFromPlaylist = (key) => {
-    const playlistName = "favorites__Playlist";
-    
-    let jsonSongs = null;
-    const self = this;
-    AsyncStorage.multiGet(["Songs"], (err, stores) => {
-        stores.forEach((store, index) => {
-            if(index == 0) {
-                jsonSongs = store[1];
-                jsonSongs = JSON.parse(jsonSongs);
-                jsonSongs = jsonSongs.map(json => {
-                    if(json.uri == key) {
-                        console.log("YEISON", json);
-                        let playlist = json.playlist;
-                        playlist = playlist.filter(play => play != playlistName);
-                        json["playlist"] = playlist;
-                        return json;
-                    }
-                    return json;
-                });
-                jsonSongs = jsonSongs.filter(song => song.playlist.length > 0);
-                console.log(jsonSongs)
-            }
-        });
-        self.addToAllSongs(jsonSongs);
-        jsonSongs = JSON.stringify(jsonSongs);
-
-        AsyncStorage.multiSet([['Songs', jsonSongs]], () => {
-            ToastAndroid.showWithGravity(
-                `Song delete from favorites`,
-                ToastAndroid.SHORT,
-                ToastAndroid.CENTER,
-            );
-            let JSONified = JSON.parse(jsonSongs);
-            // if(cameFrom == "Playlists") {
-            //     JSONified = JSONified.filter(json => json.playlist.includes(playlistName));
-            // }
-            // else if(cameFrom == "Downloads") {
-            //     JSONified = JSONified.filter(json => json.playlist.includes(playlistName) && json.isDownloaded);
-            // }
-
-            console.log("FEDERER", JSONified)
-            self.updatePlaylistAfterDownload();
-        });
-        
-    });
-}
-
-  addToPlaylist = async (item) => {
-    const self  = this;
-    const key = "favorites__Playlist";
-    let {channel, title, uri, time, imageURI, } = item;
-    console.log(item);
-    channel = channel === undefined ? "Unknown" : channel;
-
-    let songObject = {playlist: [key], imageURI, channel, title, uri, time, path: "", isDownloaded: false, customName: false, customArtist: false};
-    if(imageURI != `file:///storage/emulated/0/Android/data/com.muustube/files/Images/${uri}.png`) {
-      self.downloadImage(imageURI, uri);
-      songObject.imageURI = `file:///storage/emulated/0/Android/data/com.muustube/files/Images/${uri}.png`;
-    }
-    if(item != 'ERROR') {
-        try {
-            await AsyncStorage.getItem("Songs")
-            .then(response => {
-                let songs = JSON.parse(response);
-                if(songs != null) {
-                    let playlistSongs = songs.filter(song => song.playlist.includes(key));
-                    let newIndexPlaylist = playlistSongs.length;
-                    let isInThePlaylist = true;
-                    let isSavedAlready = false;
-                    let newSongsArray = songs.map(song => {
-                        if(song.uri == songObject.uri && !song.playlist.includes(key)) {
-                            song["playlistsIndex"] = song["playlistsIndex"] === undefined ? {[key]: newIndexPlaylist} : {...song["playlistsIndex"], [key]: newIndexPlaylist};
-                            song.playlist.push(key);
-                            isSavedAlready = true;
-                            return song;
-                        }
-                        else if(song.uri == songObject.uri && song.playlist.includes(key)) {
-                            isSavedAlready = true;
-                            return song;
-                        }
-                        else {
-                            isInThePlaylist = true;
-                            return song;
-                        }
-                    });
-
-                    if(!isSavedAlready) {
-                        songObject["playlistsIndex"] = songObject["playlistsIndex"] === undefined ? {[key]: newIndexPlaylist} : {...songObject["playlistsIndex"], [key]: newIndexPlaylist};;
-                        console.log(songObject)
-                        newSongsArray.push(songObject);
-                    }
-
-                    console.log("FEDERERERERERERE", newSongsArray)
-                    //songs.push(songObject)
-                    self.addToAllSongs(newSongsArray);
-                    songs = JSON.stringify(newSongsArray);
-                    AsyncStorage.setItem("Songs", songs)
-                    .then(response => {
-                        ToastAndroid.showWithGravity(
-                            `Song added to playlist`,
-                            ToastAndroid.SHORT,
-                            ToastAndroid.CENTER,
-                          );
-                        // this.props.navigation.goBack()
-                        self.updatePlaylistAfterDownload();
-                    })
-                    .catch(error => console.log(error))
-                }
-                else {
-                    songObject["playlistsIndex"] = songObject["playlistsIndex"] === undefined ? {[key]: 0} : {...songObject["playlistsIndex"], [key]: 0};
-                    let songs = [songObject];
-                    songs = JSON.stringify(songs);
-                    AsyncStorage.setItem("Songs", songs)
-                    .then(response => {
-                        ToastAndroid.showWithGravity(
-                            `Song added to playlist`,
-                            ToastAndroid.SHORT,
-                            ToastAndroid.CENTER,
-                          );
-                        // this.props.navigation.goBack()
-                        self.updatePlaylistAfterDownload();
-                    })
-                    .catch(error => console.log(error))
-                }
-            })
-            .catch(error => console.log(error));
-        }
-        catch(error) {
-            console.log(error)
-        }
-    }
-}
-
-
-  enableMusicControls = () => {
+  const enableMusicControls = () => {
     MusicControl.setNowPlaying({
-        title: this.state.videoTitle,
-        artwork: this.state.imageURI, // URL or RN's image require()
-        artist: this.state.videoChannel,
+        title: videoTitle,
+        artwork: imageURI, // URL or RN's image require()
+        artist: videoChannel,
         album: '',
         genre: '',
         duration: 294, // (Seconds)
@@ -1540,17 +1349,114 @@ class App extends Component {
       MusicControl.enableControl('previousTrack', true);
   }
 
-  updateMusicControls = (willPlay = false) => {
-    let { paused } = this.state;
-    paused = willPlay ? false : paused;
+  const updateMusicControls = (willPlay = false) => {
+    const tempPaused = willPlay ? false : paused;
     MusicControl.updatePlayback({
-      state: paused ? MusicControl.STATE_PAUSED : MusicControl.STATE_PLAYING,
+      state: tempPaused ? MusicControl.STATE_PAUSED : MusicControl.STATE_PLAYING,
       elapsedTime: 135,
-      title: this.state.videoTitle,
-      artwork: this.state.imageURI, // URL or RN's image require()
-      artist: this.state.videoChannel,
+      title: videoTitle,
+      artwork: imageURI, // URL or RN's image require()
+      artist: videoChannel,
     })
   }
+
+
+  // creating functions to make it work lmao
+  const stop = () => {
+    togglePause(true);
+  }
+
+  const loadingState = () => console.log('messi')
+
+  const scale = animation.interpolate({inputRange:[0, 1], outputRange:[30, 0], extrapolate:'clamp'});
+  const opacity = animation.interpolate({inputRange:[0, 0.9, 1], outputRange:[1, 1, 0], extrapolate:'clamp'})
+  return(
+      <View style={{flex:1, backgroundColor:'#222', position:'relative'}}>
+        {splashScreenIsActive ?
+        (<SplashScreen upliftSplashState={upliftSplashState} isAboutToActivate={isAboutToActivate} />)
+        :
+        (
+          <View style={{flex:1, width:'100%'}}>
+            <AppContainer
+              screenProps={{
+                // ...state,
+                downloadImage: downloadImage,
+                paused: paused,
+                stop: stop,
+                currentVideoURIChange: changeCurrentVideo,
+                currentVideoKeyChange: changeCurrentVideoKey,
+                currentVideoKey: currentVideoKey,
+                currentVideoIndexChange:changeCurrentVideoIndex,
+                changeVideoChannel:changeVideoChannel,
+                changeVideoTitle:changeVideoTitle,
+                playNewSong: playNewSong,
+                setVideoList: setVideoList,
+                videoList: videoList,
+                togglePause: togglePause,
+                playNextSong: playNextSong,
+                isLoadingSong: isLoadingSong,
+                loadingState: loadingState,
+                playIndexSong: playIndexSong,
+                isDownloadingSong: isDownloadingSong,
+                isDownloadingSongStatus: isDownloadingSongStatus,
+                musicPlayerFullScreen: musicPlayerFullScreen,
+                musicPlayerHide: toggleFullScreenMusicPlayer, // using dispatch redux
+                changeSearchListStatus: changeSearchListStatus, //using dispatch redux
+                searchListStatus: changeSearchListStatus, //using dispatch redux
+                setVideoListPlaylist: changeVideoListPlaylist, // using dispatch redux
+                searchListActive: searchListActive,
+                videoListPlaylist: videoListPlaylist,
+                downloadSong: downloadSong,
+                changeVideoDownloadStatus: changeVideoDownloadStatus,
+                updateLastPlaylist: updateLastPlaylist,
+                searched: searched,
+                changeSplashState: changeSplashState,
+                isLoadingSearch: isLoadingSearch,
+                loadingSearchStatus: changeIsLoadingSearch, // using dispatch redux
+                downloadedSongsList: downloadedSongsList,
+                downloadingVideoKey: downloadingVideoKey,
+                setDownloadingVideoKey: changeDownloadingVideoKey, // using dispatch redux
+                switchValue: sourceIsAudio,
+                sourceIsAudio: sourceIsAudio,
+                changeSource: () => console.log('change source'),
+                currentVideoItem: currentVideoItem,
+                appIsConnected: appIsConnected,
+                setLocalePlaylist: setLocalePlaylist,
+                setLastSearch: setLastSearch,
+                setSongProgress: setSongProgress,
+                updatePlaylistAfterDownload: updatePlaylistAfterDownload,
+                currentPlaylistName: currentPlaylistName,
+                addToAllSongs: addToAllSongs,
+                allSongs: allSongs,
+                changeRelatedVideos: changeRelatedVideos,
+                playAndPause: playpause,
+                currentVideoURImage: changeImageURI
+                }}
+            />
+            <MusicPlayer
+              // {...state}
+              playNextSong={playNextSong}
+              playNextSongOnScroll={playNextSongOnScroll}
+              playpause={playpause}
+              currentVideoURIChange={changeCurrentVideo}
+              currentVideoIndexChange={changeCurrentVideoIndex}
+              currentVideoKeyChange={currentVideoKey}
+              toggleFullScreenMusicPlayer={toggleFullScreenMusicPlayer}
+              downloadSong={downloadSong}
+              changeVideoDownloadStatus={changeVideoDownloadStatus}
+              enableMusicControls={enableMusicControls}
+              updateLastSongData={updateLastSongData}
+              setSongProgress={setSongProgress}
+              toggleFullScreenMusicPlayer={toggleFullScreenMusicPlayer}
+            />
+          </View>
+        )
+        }
+        {(loadingBubble && !splashScreenIsActive) ?
+        (<Animated.View style={{position:'absolute', opacity, top:(height / 2) - 250, left: (width/2) - 250, width: 500, height: 500, borderRadius: 500, backgroundColor:'#ea4c89 ', transform:[{scale}]}} />)
+      : null}
+      </View>
+  );
 }
 
 

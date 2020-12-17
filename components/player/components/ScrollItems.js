@@ -20,17 +20,19 @@ class ScrollItems extends Component {
                      key={i}>
                        <RelatedThumbnails  
                         item={item}
-                        styling={isAudioSource ? {width: (screenWidth/100)*70, marginRight:(screenWidth/100) * 15, marginLeft:(screenWidth/100) * 15, height: (screenWidth/100)*70, shadowColor: "#000",} : styles.doNotDisplay}
+                        isAudioSource={isAudioSource}
                         src={{uri: video.video_thumbnail}} />
                      </View> 
                     );
                   }
                   return (
-                    <View style={{width: screenWidth, height: screenWidth, justifyContent:'center', alignItems:'center'}}
-                    key={i}>
+                    <View
+                      style={{width: screenWidth, height: screenWidth, justifyContent:'center', alignItems:'center'}}
+                      key={i}
+                    >
                       <RelatedThumbnails
                       item={item}
-                      styling={isAudioSource ? {width: (screenWidth/100)*70, marginRight:(screenWidth/100) * 15, marginLeft:(screenWidth/100) * 15, height: (screenWidth/100)*70, shadowColor: "#000",} : styles.doNotDisplay}
+                      isAudioSource={isAudioSource}
                       src={{uri: video.imageURI}} />
                     </View>
                   );

@@ -47,20 +47,20 @@ class PlaylistOptions extends Component {
     render() {
         const { navigation } = this.props;
         const item = navigation.getParam('item', 'ERROR');
-        const myIcon = (<Icon name={"ios-more"} size={25} color={"white"} style={{padding:12}} />)
+        const myIcon = (<Icon name={"ios-more"} size={25} color={"#444"} style={{padding:12}} />)
 
 
       return (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-start' }}>
             {this.state.modalOpen ? (<ModalPlaylists isPlaylistOptions={true} deletePlaylist={this.deletePlaylist} playlist={this.state.currentPL} closeModal={this.closeModalEdit} />) : false}
-            <View style={{width:'100%', height:'12%', backgroundColor: 'black', flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingLeft:20, paddingRight:20}}>
+            <View style={{width:'100%', height:'12%', backgroundColor: '#D3E0EC', flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingLeft:20, paddingRight:20}}>
                 <TouchableOpacity onPress={this.goBack}>
-                    <Icon name={"ios-arrow-back"} size={28} color={"white"} />
+                    <Icon name={"ios-arrow-back"} size={28} color={"#444"} />
                 </TouchableOpacity>
-                <Text style={{color:'white', fontSize:20}}>Playlists</Text>
+                <Text style={{color:'#444', fontSize:20}}>Playlists</Text>
                 <TouchableOpacity
                 onPress={this.openModal}>
-                    <Icon name={"ios-add-circle-outline"} size={28} color={"white"} />
+                    <Icon name={"ios-add-circle-outline"} size={28} color={"#444"} />
                 </TouchableOpacity>
             </View>
           {this.state.playlists.length < 1 
@@ -69,14 +69,14 @@ class PlaylistOptions extends Component {
             <Text style={{fontSize:24}}>No tienes playlists creadas</Text>
         </View>
         :
-        <ScrollView style={{width:'100%', backgroundColor:'black'}}>
+        <ScrollView style={{width:'100%', backgroundColor:'#D3E0EC'}}>
             {this.state.playlists.map(play => 
                 play == "songsDownloadedOnDevice" || play == "favorites__Playlist" ?
                 null
                 :
                 (
-                <TouchableOpacity onLongPress={() => this.openModalEdit(play)} onPress={() => this.addToPlaylist(play)} key={play} style={{borderBottomWidth:1, borderColor:'rgba(28, 164, 255, 0.25)', paddingTop: 20, paddingBottom: 20, paddingLeft: 35, flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
-                    <Text style={{color:'white'}}>{play}</Text>
+                <TouchableOpacity onLongPress={() => this.openModalEdit(play)} onPress={() => this.addToPlaylist(play)} key={play} style={{borderBottomWidth:1, borderColor:'#ea4c89', paddingTop: 20, paddingBottom: 20, paddingLeft: 35, flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
+                    <Text style={{color:'#444'}}>{play}</Text>
                     {/*<OptionsMenu
                         customButton={myIcon}
                         destructiveIndex={1}
@@ -95,7 +95,7 @@ class PlaylistOptions extends Component {
                 value={this.state.text}
                 style={{width:'85%', height: '35%', borderWidth:1, borderColor:'gray', fontSize:16, paddingLeft:10, borderRadius:50}}></TextInput>
                 <TouchableOpacity onPress={this.createPlaylist} style={{padding:15, width:'65%', borderRadius:50, backgroundColor:'#303F9F'}}>
-                    <Text style={{color:'white', textAlign:'center', fontSize:14}}>Crear playlist</Text>
+                    <Text style={{color:'#444', textAlign:'center', fontSize:14}}>Crear playlist</Text>
                 </TouchableOpacity>
             </View>
           </View>

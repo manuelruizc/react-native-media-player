@@ -9,7 +9,7 @@ downloadSongHelper = async(item) => {
       let value = await AsyncStorage.getItem('Songs');
       if(value == null) {
         self.isDownloadingSongStatus(true, uri);
-        axios.get(`https://sellosylaserinkprint.com/debbiedowner/scrap/videoinfo/${uri}`)
+        axios.get(`https://tubeplaya.herokuapp.com/video_info/${uri}`)
         .then(function (response) {
           let {downloadingVideoKey} = self.state;
           downloadingVideoKey.push(uri);
@@ -74,7 +74,7 @@ downloadSongHelper = async(item) => {
       }
       else {
         self.isDownloadingSongStatus(true, uri);
-        axios.get(`https://sellosylaserinkprint.com/debbiedowner/scrap/videoinfo/${uri}`)
+        axios.get(`https://tubeplaya.herokuapp.com/video_info/${uri}`)
         .then(function (response) {
           let {downloadingVideoKey} = self.state;
           downloadingVideoKey.push(uri);
@@ -101,10 +101,10 @@ downloadSongHelper = async(item) => {
 
 }
 
-import { RNFS } from 'react-native-fs';
+import RNFS from 'react-native-fs';
 import { AsyncStorage } from 'react-native';
 
-export const createInitialPaths = () => {
+export const createInitialPaths = async () => {
   let path_name = "file:///storage/emulated/0/Android/data/com.muustube/files/Download/";
   let path_imgs = "file:///storage/emulated/0/Android/data/com.muustube/files/Images/";
 
@@ -153,137 +153,143 @@ export const createDefaultPlaylits = () => {
 
 
 
-export const nice_function = () => {
-  AsyncStorage.multiGet(["currentSong", "currentPlaylist", "Songs", "SourceIsAudio", "songProgress", "lastSearch", "currentVideoItem"], (err, stores) => {
-    stores.forEach((store, index) => {
-      if(index == 0) {
-        if(store[1]) {
-          const JSONified = JSON.parse(store[1]);
-          // let sourceIsAudio = stores[3][1];
-          // sourceIsAudio = JSON.parse(sourceIsAudio);
-          let sourceIsAudio = true //sourceIsAudio[0].sourceIsAudio;
-          console.log("LAST_SONG", JSONified)
-          self.setState({
-            imageURI: JSONified.image,
-            currentVideoIndex: JSONified.index,
-            currentVideoKey: JSONified.key,
-            currentVideo: sourceIsAudio ? JSONified.pathAudio : JSONified.pathVideo,
-            videoChannel: JSONified.videoChannel,
-            videoIsDownloaded: JSONified.videoIsDownloaded,
-            videoTitle: JSONified.videoTitle,
-            currentVideoItem: JSONified,
-          });
-        }
+export const initialStorageSettings = async () => {
+  const storage_data = await AsyncStorage.multiGet(["currentSong", "currentPlaylist", "Songs", "SourceIsAudio", "songProgress", "lastSearch", "currentVideoItem"]);
+  console.log("assss",storage_data);
+  let status = false;
+  let response_array = [];
+  storage_data.forEach((store, index) => {
+    let storage_response = store[1];
+    if(index == 0) {
+      if(storage_response) {
+        const JSONified = JSON.parse(storage_response);
+        // let sourceIsAudio = stores[3][1];
+        // sourceIsAudio = JSON.parse(sourceIsAudio);
+        let sourceIsAudio = true //sourceIsAudio[0].sourceIsAudio;
+        response_array.push({
+          imageURI: JSONified.imageURI,
+          currentVideoIndex: JSONified.index,
+          currentVideoKey: JSONified.key,
+          currentVideo: sourceIsAudio ? JSONified.pathAudio : JSONified.pathVideo,
+          videoChannel: JSONified.videoChannel,
+          videoIsDownloaded: JSONified.videoIsDownloaded,
+          videoTitle: JSONified.videoTitle,
+          currentVideoItem: JSONified,
+        });
       }
-      else if(index == 1) {
-        let response = store[1];
-        if(response !=  null) {
-          response = JSON.parse(response);
-          console.log("last playlist", response)
-          const source = response[0];
-          let playlist = response[1];
-          const currentPlaylistName = response[2];
-          if(source == "playlist") {
-            if(currentPlaylistName != "songsDownloadedOnDevice") {
-              playlist = playlist.filter(play => play.playlist.includes(currentPlaylistName))
-              playlist.sort(function(a, b) { 
-                return a.playlistsIndex[currentPlaylistName] - b.playlistsIndex[currentPlaylistName];
-              });
-            }
-            console.log("PLEASE ME",playlist)
-            status = false;
-            self.setState({searchListActive: false, videoListPlaylist: playlist, playlistSource: source, currentPlaylistName});
+    }
+    else if(index == 1) {
+      if(storage_response) {
+        const response = JSON.parse(storage_response);
+        console.log("response", response)
+        const source = response[0];
+        let playlist = response[1];
+        const currentPlaylistName = response[2];
+        if(source == "playlist") {
+          if(currentPlaylistName != "songsDownloadedOnDevice") {
+            playlist = playlist.filter(play => play.playlist.includes(currentPlaylistName))
+            playlist.sort(function(a, b) { 
+              return a.playlistsIndex[currentPlaylistName] - b.playlistsIndex[currentPlaylistName];
+            });
           }
-          else {
-            status = true;
-            self.setState({searchListActive: true, playlistSource: source, currentPlaylistName, videoListPlaylist: playlist, currentVideoIndex: 0,});
-          }
-        }
-      }
-      else if(index == 2) {
-        if(store[1] != null) {
-          let allSongs = store[1];
-          allSongs = JSON.parse(allSongs);
-          console.log('thats what i like',allSongs)
-          self.setState({allSongs})
-        }
-      }
-      else if(index == 3) {
-        if(store[1] != null) {
-          let sourceIsAudio = store[1];
-          sourceIsAudio = JSON.parse(sourceIsAudio);
-          sourceIsAudio = sourceIsAudio[0].sourceIsAudio;
-          sourceIsAudio ? self.setState({sourceIsAudio: true}) : self.setState({sourceIsAudio: false})
-        }
-      }
-      else if(index == 4) {
-        if(store[1] != null) {
-          let songProgress = Number(store[1]);
-          self.setState({songProgress});
-        }
-      }
-      else if(index == 5) {
-        if(store[1] != null) {
-          let lastSearch = String(store[1]);
-          self.setState({lastSearch});
-          NetInfo.getConnectionInfo().then(data => {
-            if(data.type == "unknown") {
-              this.setState({appIsConnected: false});
-              // this.changeSplashState(lastSearch);
-            }
-            else {
-              this.setState({appIsConnected: true});
-              // this.changeSplashState(lastSearch);
-            }
+          status = false;
+          response_array.push({
+            searchListActive: false,
+            videoListPlaylist: playlist,
+            playlistSource: source,
+            currentPlaylistName,
           });
         }
         else {
-          NetInfo.getConnectionInfo().then(data => {
-            if(data.type == "unknown") {
-              this.setState({appIsConnected: false});
-              // this.changeSplashState(self.state.lastSearch);
-            }
-            else {
-              this.setState({appIsConnected: true});
-              // this.changeSplashState(self.state.lastSearch);
-            }
+          status = true;
+          response_array.push({
+            searchListActive: true,
+            playlistSource: source,
+            currentPlaylistName,
+            videoListPlaylist: playlist,
+            currentVideoIndex: 0,
           });
         }
       }
-      else if(index == 6) {
-        if(store[1] == null) {
-          self.getSavedSongData(null, true)
-          self.searchListStatus(true);
-          console.log("AQUI queeee")
-          return true;
-        }
-        let currentVideoItem = String(store[1]);
-        songData = JSON.parse(currentVideoItem);
-        let isAudioSource = JSON.parse(stores[3][1]);
-        isAudioSource = isAudioSource == null ? true :isAudioSource[0].sourceIsAudio;
-        const { isDownloaded, channel, imageURI, title, uri, pathVideo, pathAudio } = songData;
-        self.setState({currentVideoItem: songData}, () => {
-          if(isDownloaded) {
-            // self.currentVideoURIChange(path);
-            self.setState({currentVideo: isAudioSource ? pathAudio : pathVideo, paused: true});
-            self.currentVideoKeyChange(uri);
-            self.currentVideoURImage(imageURI);
-            self.changeVideoChannel(channel);
-            self.changeVideoTitle(title);
-            self.playNewSong(true, index);
-            self.loadingState(false);
-            self.changeVideoDownloadStatus(true);
-            self.changeCurrentVideoUpdate(songData); // dummy function
-            self.searchListStatus(false);
-            self.changeSplashState(self.state.lastSearch);
-          }
-          else {
-              self.changeCurrentVideoUpdate(songData); // dummy function
-              self.getSavedSongData(songData)
-              self.searchListStatus(status);
-          }
-        });
+    }
+    else if(index == 2) {
+      if(storage_response) {
+        let allSongs = storage_response;
+        allSongs = JSON.parse(allSongs);
+        response_array.push({allSongs})
       }
-    });
+    }
+    else if(index == 3) {
+      if(storage_response) {
+        let sourceIsAudio = storage_response;
+        sourceIsAudio = JSON.parse(sourceIsAudio);
+        sourceIsAudio = sourceIsAudio[0].sourceIsAudio;
+        response_array.push({sourceIsAudio})
+      }
+    }
+    else if(index == 4) {
+      if(storage_response) {
+        let songProgress = Number(storage_response);
+        response_array.push({songProgress})
+      }
+    }
+    else if(index == 5) {
+      if(storage_response) {
+        let lastSearch = storage_response;
+        response_array.push({lastSearch});
+      }
+    }
+    else if(index == 6) {
+      if(storage_response == null) {
+        // self.getSavedSongData(null, true)
+        // self.searchListStatus(true);
+        return true;
+      }
+      else {
+        const song_data = JSON.parse(storage_response);
+        console.log("runningawayfromyourself",song_data)
+        const { isDownloaded, channel, imageURI, title, uri, pathVideo, pathAudio } = song_data;
+        response_array.push({currentVideoItem: song_data,})
+        // const aa = () => {
+        //   if(isDownloaded) {
+        //     // self.currentVideoURIChange(path);
+        //     self.setState({currentVideo: isAudioSource ? pathAudio : pathVideo, paused: true});
+        //     self.currentVideoKeyChange(uri);
+        //     self.currentVideoURImage(imageURI);
+        //     self.changeVideoChannel(channel);
+        //     self.changeVideoTitle(title);
+        //     self.playNewSong(true, index);
+        //     self.loadingState(false);
+        //     self.changeVideoDownloadStatus(true);
+        //     self.changeCurrentVideoUpdate(songData); // dummy function
+        //     self.searchListStatus(false);
+        //     self.changeSplashState(self.state.lastSearch);
+        //   }
+        //   else {
+        //       self.changeCurrentVideoUpdate(songData); // dummy function
+        //       self.getSavedSongData(songData)
+        //       self.searchListStatus(status);
+        //   }
+        // };
+      }
+    }
   });
+  return response_array;
+}
+
+
+export const saveSongs = async (songObject, isAlreadyInPlaylist) => {
+  let allSongs = await AsyncStorage.getItem("Songs");
+  let songs = null;
+  if(allSongs != null) {
+    songs = JSON.parse(allSongs);
+    if(isAlreadyInPlaylist) {
+      songs = songs.filter(s => s.uri != songObject.uri);
+    }
+    songs.push(songObject);
+  }
+  else {
+    songs = [songObject];
+  }
+  return songs;
 }
