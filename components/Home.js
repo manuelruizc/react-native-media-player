@@ -13,7 +13,8 @@ import {
   ScrollView,
   TouchableHighlight,
   TextInput,
-  Easing
+  Easing,
+  AsyncStorage
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'react-native-axios';
@@ -25,6 +26,8 @@ import { styles } from './styles/HomeStyles';
 import Header from './home/Header';
 import LoadingCard from './home/LoadingCard';
 import { useSelector, useDispatch } from 'react-redux';
+import { __togglePlayerFullscreen, __updateCurrentPlaylistName, __updateCurrentVideo, __updateCurrentVideoIndex, __updateCurrentVideoItem, __updateCurrentVideoKey, __updateImageURI, __updateLastSearch, __updateLoadingSearchStatus, __updateRelatedVideos, __updateSearchListActive, __updateSongProgress, __updateVideoChannel, __updateVideoList, __updateVideoListPlaylist, __updateVideoTitle } from '../redux/actions/actionNames';
+import { saveLastSongData } from '../helpers/localstorage/saving';
 
 
 const Home = (props) => {
@@ -39,21 +42,22 @@ const Home = (props) => {
   const lastSearch = useSelector(state => state.lastSearch);
   const isLoadingSearch = useSelector(state => state.isLoadingSearch);
   const videoList = useSelector(state => state.videoList);
+  const relatedVideos = useSelector(state => state.relatedVideos);
   const dispatch = useDispatch();
   const togglePause = () => {
     dispatch({type: 'TOGGLE_PAUSE_STATE'});
   }
   const toggleMusicPlayerFullScreen = () => {
-    dispatch({type: 'TOGGLE_PLAYER_FULLSCREEN'});
+    dispatch({type: __togglePlayerFullscreen});
   }
   const updateVideoList = (videos) => {
-    dispatch({type: 'UPDATE_VIDEOLIST', payload: videos})
+    dispatch({type: __updateVideoList, payload: videos})
   }
   const updateLoadingSearch = (payload) => {
-    dispatch({type: 'UPDATE_LOADING_SEARCH_STATUS', payload});
+    dispatch({type: __updateLoadingSearchStatus, payload});
   }
   const updateLastSearch = (search) => {
-    dispatch({type: 'UPDATE_LAST_SEARCH', payload: search});
+    dispatch({type: __updateLastSearch, payload: search});
   }
 
   useEffect(() => {
@@ -74,6 +78,10 @@ const Home = (props) => {
     return () => backHandler.remove();
   }, [musicPlayerFullScreen]);
 
+  const updateLastSearchFunc = (search) => {
+    updateLastSearch(search);
+    AsyncStorage.setItem('lastSearch', JSON.stringify(search));
+  }
 
   const openModal = (item) => {
     setCurrentItem(item);
@@ -86,12 +94,11 @@ const Home = (props) => {
 
   const searchVideo = useCallback(
     debounce((payload) => {
-      console.log("Todo me gusta de ti!", payload);
       if(payload != "") {
         setIsLoading(true);
         setVideos([]);
         updateLoadingSearch(true);
-        updateLastSearch(payload);
+        updateLastSearchFunc(payload);
         axios.get(`http://tubeplaya.herokuapp.com/search/${payload}/`)
         .then(function (response) {
           setVideos(response.data);
@@ -127,38 +134,43 @@ const Home = (props) => {
   // }, 1000);
 
   const getVideoURI = async (uri, title, index, imageURI) => {
-    props.screenProps.loadingState(true);
-    props.screenProps.changeSearchListStatus(true);
-    props.screenProps.currentVideoKeyChange(uri);
-    props.screenProps.changeVideoDownloadStatus(false);
-    props.screenProps.currentVideoIndexChange(0);
-    const propVideos = props.screenProps.videoList;
-    props.screenProps.setSongProgress(0, false);
-    props.screenProps.updateLastPlaylist(propVideos, "search", "searchbar");
-
-    const newStateVideos = propVideos.map((_video, i) => {
-      if(index == i && !_video.isPlaying) {
-        return {title: _video.title, uri: _video.uri, imageURI: _video.imageURI, time: _video.time, isPlaying: true};
-      }
-      else {
-        return {title: _video.title, uri: _video.uri, imageURI: _video.imageURI, time: _video.time, isPlaying: false};
-      }
-    });
-
-
+  
     if(uri == props.screenProps.currentVideoKey) {
       props.screenProps.togglePause();
     }
     else {
+      // make this a function
+      // updateLoadingSearch(true);x
+      // dispatch({type: __updateSearchListActive, payload: true});
+      dispatch({type:__updateCurrentVideoKey, payload: uri});
+      dispatch({type: __updateCurrentVideoIndex, payload: 0});
+      dispatch({type: __updateSongProgress, payload: 0});
+      dispatch({type: __updateVideoListPlaylist, payload: videoList});
+      dispatch({type: __updateCurrentPlaylistName, payload: 'searchbar'});
+      dispatch({type: __updateCurrentPlaylistName, payload: 'search'});
+      // props.screenProps.changeVideoDownloadStatus(false); ????
+      const newStateVideos = videoList.map((_video, i) => {
+        if(index == i && !_video.isPlaying) {
+          return {title: _video.title, uri: _video.uri, imageURI: _video.imageURI, time: _video.time, isPlaying: true};
+        }
+        else {
+          return {title: _video.title, uri: _video.uri, imageURI: _video.imageURI, time: _video.time, isPlaying: false};
+        }
+      });
       setIsLoading(true);
       setVideos(newStateVideos);
       const response = await axios.get(`https://tubeplaya.herokuapp.com/video_info/${uri}`);
       const source = props.screenProps.switchValue ? response.data.formats[0].url : response.data.formats[1].url;
-      props.screenProps.currentVideoURIChange(source);
-      props.screenProps.currentVideoURImage(response.data.thumbnail);
-      props.screenProps.changeVideoChannel(response.data.uploader);
-      props.screenProps.changeVideoTitle(response.data.title);
-      props.screenProps.updateRelatedVideos(response.data.related_videos.slice(0, 2));
+      // props.screenProps.currentVideoURIChange(source);
+      dispatch({type: __updateCurrentVideo, payload: source});
+      // props.screenProps.currentVideoURImage();
+      dispatch({type: __updateImageURI, payload: response.data.thumbnail});
+      // props.screenProps.changeVideoChannel(response.data.uploader);
+      dispatch({type: __updateVideoChannel, payload: response.data.uploader});
+      // props.screenProps.changeVideoTitle(response.data.title);
+      dispatch({type: __updateVideoTitle, payload: response.data.title});
+      // props.screenProps.updateRelatedVideos(response.data.related_videos.slice(0, 2));
+      dispatch({type: __updateRelatedVideos, payload: response.data.related_videos.slice(0, 2)})
       const songData = {channel: response.data.uploader, isDownloaded: false, title: response.data.title, path:"", time: "", uri, imageURI: response.data.thumbnail};
       props.screenProps.playNewSong(false, index, songData);
       setVideoList();
@@ -175,7 +187,7 @@ const Home = (props) => {
   }
 
   const setVideoList = () => {
-    props.screenProps.setVideoList(videos);
+    // props.screenProps.setVideoList(videos);
   }
 
   const changeText = text => {
@@ -188,7 +200,7 @@ const Home = (props) => {
 
   const playSong = (index, songData) => {
     const pathName = props.screenProps.switchValue ? "pathAudio" : "pathVideo";
-    const {channel, isDownloaded, title, time, uri, imageURI} = songData;
+    const { channel, title, time, uri, imageURI, isDownloaded } = songData;
     const path = songData[pathName];
     props.screenProps.setSongProgress(0, false);
 
@@ -197,15 +209,24 @@ const Home = (props) => {
     }
     else {
       if(isDownloaded) {
-        props.screenProps.currentVideoURIChange(path);
-        props.screenProps.currentVideoKeyChange(uri);
-        props.screenProps.currentVideoURImage(imageURI);
-        props.screenProps.changeVideoChannel(channel);
-        props.screenProps.changeVideoTitle(title);
-        props.screenProps.playNewSong(false, index);
-        props.screenProps.loadingState(false);
-        props.screenProps.changeVideoDownloadStatus(true);
-        props.screenProps.searchListStatus(true);
+        dispatch({type: __updateCurrentVideoKey, payload: songData.uri});
+        dispatch({type: __updateCurrentVideoItem, payload: songData});
+        dispatch({type: __updateCurrentVideoIndex, payload: 0});
+        dispatch({type: __updateSearchListActive, payload: true});
+        dispatch({type: __updateCurrentVideo, payload: path});
+        const tempSongData = Object.assign({}, songData);
+        const newRelatedVideos = !relatedVideos[0] ? [tempSongData] : [tempSongData, relatedVideos[1]];
+        dispatch({type: __updateRelatedVideos, payload: newRelatedVideos});
+        saveLastSongData(songData);
+        // props.screenProps.playNewSong(false, index);
+        // props.screenProps.currentVideoURIChange(path);
+        // props.screenProps.currentVideoKeyChange(uri);
+        // props.screenProps.currentVideoURImage(imageURI);
+        // props.screenProps.changeVideoChannel(channel);
+        // props.screenProps.changeVideoTitle(title);
+        // props.screenProps.loadingState(false);
+        // props.screenProps.changeVideoDownloadStatus(true);
+        // props.screenProps.searchListStatus(true);
       }
       setVideoList();
       props.screenProps.updateLastPlaylist(props.screenProps.videoList, "search", "searchbar");

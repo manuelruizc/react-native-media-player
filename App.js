@@ -25,7 +25,7 @@ import FullPlayer from './components/player/components/players/FullPlayer';
 import SmallPlayer from './components/player/components/players/SmallPlayer';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import store from './redux/store/store';
-import { __togglePause, __togglePlayerFullscreen, __updateAllSongs, __updateCurrentPlaylistName, __updateCurrentVideo, __updateCurrentVideoIndex, __updateCurrentVideoItem, __updateCurrentVideoKey, __updateDownloadedSongsList, __updateDownloadingVideoKey, __updateImageURI, __updateIsDownloadingSong, __updateLastSearch, __updatePlaylistSource, __updateRelatedVideos, __updateSearchListActive, __updateSongProgress, __updateVideoChannel, __updateVideoList, __updateVideoListPlaylist, __updateVideoTitle } from './redux/actions/actionNames';
+import { __togglePause, __togglePlayerFullscreen, __updateAllSongs, __updateCurrentPlaylistName, __updateCurrentVideo, __updateCurrentVideoIndex, __updateCurrentVideoItem, __updateCurrentVideoKey, __updateDownloadedSongsList, __updateDownloadingVideoKey, __updateImageURI, __updateIsDownloadingSong, __updateLastSearch, __updateLoadingSearchStatus, __updatePlaylistSource, __updateRelatedVideos, __updateSearchListActive, __updateSongProgress, __updateVideoChannel, __updateVideoList, __updateVideoListPlaylist, __updateVideoTitle } from './redux/actions/actionNames';
 // paused: true,
 // currentVideo: "https://r4---sn-0opoxu-hxmee.googlevideo.com/videoplayback?clen=4094846&requiressl=yes&key=cms1&txp=5511222&keepalive=yes&source=youtube&mime=audio%2Fwebm&ip=198.54.114.79&sparams=clen,dur,ei,expire,gir,id,ip,ipbits,ipbypass,itag,keepalive,lmt,mime,mip,mm,mn,ms,mv,pl,requiressl,source,usequic&id=o-AN_WkpC93qd3PsPjErSrLWTAKtZuASNIvBsBKDpCt1Wj&ei=yojDXKTjJdmYkwaO269Q&fvip=4&lmt=1540654186975365&c=WEB&gir=yes&dur=255.541&expire=1556340010&pl=51&ipbits=0&itag=251&ratebypass=yes&signature=48A796AFBD2B713B5EE804CDCB515F968636668D.0E93313E8F287675D0C945C7B998AF9511AFCDA7&redirect_counter=1&rm=sn-a5mkk7z&req_id=2a742d812695a3ee&cms_redirect=yes&ipbypass=yes&mip=2806:104e:19:5399:11ea:f81:d133:5baa&mm=31&mn=sn-0opoxu-hxmee&ms=au&mt=1556318332&mv=m&usequic=no",
 // downloadPath: `${RNFS.DocumentDirectoryPath}`,
@@ -227,14 +227,11 @@ const App = () => {
   }
 // 20
 const togglePause = (payload = null) => {
-  console.log('payload', payload);
   if(payload === null) {
-    console.log('hay payload');
     return dispatch({
       type: __togglePause
     });
   }
-  console.log('no hay payload');
   dispatch({
     type: __togglePause,
     payload
@@ -270,7 +267,15 @@ const changeLastSearch = (payload) => {
 
 // 12
   const changeIsLoadingSearch = (payload) => {
-    // check this....
+    if(payload) {
+      return dispatch({
+        type: __updateLoadingSearchStatus,
+        payload
+      });
+    }
+    dispatch({
+      type: __updateLoadingSearchStatus
+    })
   }
 // 13
   const changeVideoDownloadStatus = (bool) => {
@@ -290,7 +295,6 @@ const changeLastSearch = (payload) => {
 
 //SETUPS INICIALES
   const initial_ = (object) => {
-    console.log('OBJECT inital_',object)
     const { isDownloaded, channel, imageURI, title, uri, pathVideo, pathAudio, index } = object.currentVideoItem;
     if(isDownloaded) {
       // self.currentVideoURIChange(path);
@@ -303,7 +307,7 @@ const changeLastSearch = (payload) => {
       // this.loadingState(false);
       // this.changeVideoDownloadStatus(true);  check if this is used
       changeSearchListStatus(false);
-      changeSplashState(lastSearch);
+      changeSplashState();
     }
     else {
       getSavedSongData(object.currentVideoItem)
@@ -332,7 +336,7 @@ const changeLastSearch = (payload) => {
     // CHECK THIS!!!!
     const initial_storage_response = await initialStorageSettings();
     if(initial_storage_response.length === 0) {
-      changeSplashState(lastSearch);
+      changeSplashState();
       return true;
     }
     initial_storage_response.forEach((object, index) => {
@@ -356,15 +360,10 @@ const changeLastSearch = (payload) => {
   const setUpStorageDataToStore = (object) => {
     const keys = Object.keys(object);
     const values = Object.values(object);
-    console.log('OBJECT',object)
-    console.log(keys);
-    console.log(values);
     let i = 0;
     for(i; i < keys.length; i++) {
       const currentKey = keys[i];
       const currentValue = values[i];
-      console.log('currentKey', currentKey)
-      console.log('currentValue', currentValue)
       if(currentKey === 'allSongs') {
         changeAllSongs(currentValue);
         continue;
@@ -383,15 +382,10 @@ const changeLastSearch = (payload) => {
   const setUpStorageDataToStoreSearchListData = (object) => {
     const keys = Object.keys(object);
     const values = Object.values(object);
-    console.log('OBJECT',object)
-    console.log(keys);
-    console.log(values);
     let i = 0;
     for(i; i < keys.length; i++) {
       const currentKey = keys[i];
       const currentValue = values[i];
-      console.log('currentKey', currentKey)
-      console.log('currentValue', currentValue)
       if(currentKey === 'searchListActive') {
         changeSearchListStatus(currentValue);
         continue;
@@ -417,15 +411,10 @@ const changeLastSearch = (payload) => {
   const setUpStorageDataToStoreCurrentVideo = (object) => {
     const keys = Object.keys(object);
     const values = Object.values(object);
-    console.log('OBJECT',object)
-    console.log(keys);
-    console.log(values);
     let i = 0;
     for(i; i < keys.length; i++) {
       const currentKey = keys[i];
       const currentValue = values[i];
-      console.log('currentKey', currentKey)
-      console.log('currentValue', currentValue)
       if(currentKey === 'imageURI') {
         changeImageURI(currentValue);
         continue;
@@ -470,12 +459,13 @@ const changeLastSearch = (payload) => {
 
   // CAMBIAR LA PANTALLA DE SPLASH AL APP Y REALIZA LA BÚSQUEDA DE CANCIONES
   // check this
-  const changeSplashState = (lastSearch) => {
+  const changeSplashState = async () => {
+    const localStorageLastSearch = await AsyncStorage.getItem('lastSearch');
     if(!appIsConnected) {
       setIsAboutToActivate(true);
       return false;
     }
-    axios.get(`http://tubeplaya.herokuapp.com/search/${lastSearch}/`)
+    axios.get(`https://tubeplaya.herokuapp.com/search/${localStorageLastSearch}/`)
       .then(function (response) {
         songs = downloadedSongsList;
         let tempVideoList = null;
@@ -509,6 +499,7 @@ const changeLastSearch = (payload) => {
 
   // LA CANCIÓN ACTUAL, GUARDAR LOS DATOS LOCALMENTE Y EN EL ESTADO
   const updateLastSongData = (data = null, index) => {
+    
     let currentSongData = {};
     if(data === null) {
       currentSongData = {
@@ -532,7 +523,6 @@ const changeLastSearch = (payload) => {
 
     AsyncStorage.multiSet([["currentSong", currentSongData], ["currentVideoItem", currentSongData]])
     .then(function(response) {
-      console.log(response)
     })
     .catch(function(error) {
       console.log(error)
@@ -548,8 +538,7 @@ const changeLastSearch = (payload) => {
     changeCurrentPlaylistName(playlistName);
     AsyncStorage.setItem("currentPlaylist", JSON.stringify(playlistArray))
     .then(function(response) {
-      console.log('saved currentPlaylist');
-      console.log(response)
+      
     })
     .catch(function(error) {
       console.log(error)
@@ -615,7 +604,6 @@ const changeLastSearch = (payload) => {
 
   // ????? fixed ?
   const playNewSong = (paused, index, songData = false) => {
-    console.log('i got a condo in manhattan')
     updateMusicControls(true);
       if(songData != false) {
         updateLastSongData(songData, index);
@@ -625,6 +613,16 @@ const changeLastSearch = (payload) => {
 
   const playNextSongOnScroll = (ix, video, initialSong = false, isFromPlaylist = false) => {
     const id = isFromPlaylist ? video.uri : video.id;
+    if(video.isDownloaded) {
+      changeCurrentVideo(sourceIsAudio ? video.pathAudio : video.pathVideo);
+      changeCurrentVideoKey(video.uri);
+      changeImageURI(video.imageURI);
+      changeVideoChannel(video.channel);
+      changeVideoTitle(video.title);
+      changeCurrentVideoItem(video);
+      changeCurrentVideoIndex(ix);
+      return
+    }
     // this.setState({isLoadingSong: true, currentVideoKey: id, songProgress: 0});
     changeCurrentVideoKey(id);
     changeSongProgress(0);
@@ -637,7 +635,6 @@ const changeLastSearch = (payload) => {
           const vid = tempRelatedVideos[i];
           if(vid.id === id) {
             if(vid.isVisited) {
-              console.log("VISTO");
               isVisited = true;
               break;
             }
@@ -672,6 +669,7 @@ const changeLastSearch = (payload) => {
       changeVideoChannel(response.data.uploader);
       changeVideoTitle(response.data.title);
       changeRelatedVideos(tempRelatedVideos);
+      changeCurrentVideoItem(response.data);
       // changeVideoISD
        //     videoIsDownloaded: false,
       
@@ -719,7 +717,6 @@ const changeLastSearch = (payload) => {
     if (isPaused != null) {
       isSongPaused = isPaused;
     }
-    console.log("mesisssisi", { currentIndex, nextIndex, vidl, videoListLength, newIndex, isSongPaused});
     togglePause(isSongPaused);
     // this.setState({isLoadingSong: true, currentVideoKey: videoInfo.uri, currentVideoIndex: nextIndex, songProgress: 0, }, () => {
     //   let paused = (newIndex === 0 && prev === null && index === null) ? true : false;
@@ -748,7 +745,6 @@ const changeLastSearch = (payload) => {
           const vid = tempRelatedVideos[i];
           if(vid.id === videoInfo.uri) {
             if(vid.isVisited) {
-              console.log("VISTO");
               isVisited = true;
               break;
             }
@@ -844,7 +840,6 @@ const changeLastSearch = (payload) => {
               const vid = tempRelatedVideos[i];
               if(vid.id === videoInfo.uri) {
                 if(vid.isVisited) {
-                  console.log("VISTO");
                   isVisited = true;
                   break;
                 }
@@ -906,9 +901,8 @@ const changeLastSearch = (payload) => {
   }
 
   const getSavedSongData = (songData, uriSearch = false) => {
-    console.log("songData", songData);
     if(!appIsConnected) {
-      changeSplashState(lastSearch);
+      changeSplashState();
       return false;
     }
     let urii = null;
@@ -916,7 +910,6 @@ const changeLastSearch = (payload) => {
     if(songData != null)
       urii = songData.key === undefined ? songData.uri : songData.key;
     const uri = uriSearch ? firstURI : urii;
-    console.log("songData", songData);
     axios.get(`https://tubeplaya.herokuapp.com/video_info/${uri}`)
     .then(function (response) {
       let isVisited = false;
@@ -961,10 +954,10 @@ const changeLastSearch = (payload) => {
       togglePause(true);
       changeRelatedVideos(tempRelatedVideos);
       changeSearchListStatus(true);
-      changeSplashState(lastSearch);
+      changeSplashState();
     })
     .catch(function (error) {
-      changeSplashState(lastSearch);
+      changeSplashState();
     });
   }
 
@@ -974,9 +967,6 @@ const changeLastSearch = (payload) => {
     const videoInfo = isFromPlaylist ? playlistLL[newIndex] : videoList[newIndex];
     
     changeCurrentVideoKey(videoInfo.uri);
-    // this.setState({isLoadingSong: true, currentVideoKey:videoInfo.uri});
-
-    console.log({fedd: videoInfo, isFromPlaylist, videoListPlaylist: playlistLL, videoList: videoList});
 
     let newStateVideos = videoList.map((vidio, i) => {
       if(currentIndex == i && !vidio.isPlaying) {
@@ -991,50 +981,18 @@ const changeLastSearch = (payload) => {
 
     axios.get(`https://tubeplaya.herokuapp.com/video_info/${videoInfo.uri}`)
     .then(function (response) {
-      let tempRelatedVideos = relatedVideos;
+      let tempRelatedVideos = [];
       let isVisited = false;
-      if(tempRelatedVideos.length > 0) {
-        for(let i = 0; i < tempRelatedVideos.length; i++) {
-          const vid = tempRelatedVideos[i];
-          if(vid.id === videoInfo.uri) {
-            if(vid.isVisited) {
-              console.log("VISTO");
-              isVisited = true;
-              break;
-            }
-            else {
-              vid.isVisited = true;
-              break;
-            }
-          }
-        }
-      }
-
-      if(!isVisited) {
-        if(tempRelatedVideos.length === 0) {
-          response.data.related_videos.slice(0, 2).forEach((video, index) => {
-            if(index === 0) {
-              video.isVisited = true;
-            }
-            tempRelatedVideos.push(video);
-          });
-        }
-        else {
-          response.data.related_videos.slice(1, 2).forEach((video, index) => {
-            tempRelatedVideos.push(video);
-          });
-        }
-      }
 
       changeCurrentVideo(sourceIsAudio ? response.data.formats[0].url : response.data.formats[2].url);
-      // changeCurrentVideoIndex(newIndex);
+      changeCurrentVideoIndex(newIndex);
       changeCurrentVideoKey(videoInfo.uri);
       changeImageURI(response.data.thumbnail);
       changeVideoList(newStateVideos);
       changeVideoChannel(response.data.uploader);
       changeVideoTitle(response.data.title);
       togglePause(false);
-      changeRelatedVideos(tempRelatedVideos);
+      changeRelatedVideos([response.data.related_videos[0], response.data.related_videos[1]]);
 
       changeCurrentVideoIndex(videoInfo);
       updateLastSongData(videoInfo, newIndex);
@@ -1066,12 +1024,9 @@ const changeLastSearch = (payload) => {
   const setSongProgress = (seconds, willSave = true) => {
     // this.setState({songProgress: seconds});
     changeSongProgress(seconds);
-    console.log('willSaveSongProgress', willSave)
     if(!willSave) return true;
-    console.log('saving is true', willSave)
     AsyncStorage.setItem("songProgress", String(seconds))
     .then(response => {
-      console.log('callback songProgress' ,response)
     })
     .catch((e) => console.log(e));
   }
@@ -1080,7 +1035,6 @@ const changeLastSearch = (payload) => {
   const setLastSearch = (lastSearch) => {
     AsyncStorage.setItem("lastSearch", String(lastSearch))
     .then(response => {
-      console.log(response)
     })
     .catch((e) => console.log(e));
   }
@@ -1093,13 +1047,11 @@ const changeLastSearch = (payload) => {
   // CHANGE IT TO ASYNC (AWAIT)
   const downloadImage = async (fromUrl, id) => {
     try {
-      console.log("IMAGE FROM THIS URL", fromUrl);
-      console.log("id___", id);
       RNFS.downloadFile({
         fromUrl,
         toFile: `file:///storage/emulated/0/Android/data/com.muustube/files/Images/${id}.png`,
       }).promise.then((r) => {
-        console.log("IMAGE DOWNLOADED");
+        
       });
     }
     catch(error) {
@@ -1149,7 +1101,6 @@ const changeLastSearch = (payload) => {
               if(sourceIsAudio) {
 
                 RNFFmpeg.execute(`-i ${url} file:///storage/emulated/0/Android/data/com.muustube/files/Download/${songObject.uri}.mp3`).then(result => {
-                  console.log(result)
                   if(result.rc === 0) {
                     songObject[pathObjectName] = `file:///storage/emulated/0/Android/data/com.muustube/files/Download/${songObject.uri}.mp3`;
                     saveSongInLocalStorage(songObject, uri);
@@ -1183,7 +1134,6 @@ const changeLastSearch = (payload) => {
 
         axios.get(`https://tubeplaya.herokuapp.com/video_info/${uri}`)
         .then(function (response) {
-          console.log("HEEERERERE")
           let tempDownloadingKey = downloadingVideoKey;
           tempDownloadingKey.push(uri);
           changeDownloadingVideoKey(tempDownloadingKey);
@@ -1203,7 +1153,6 @@ const changeLastSearch = (payload) => {
           let playlistSongs = JSON.parse(newSongs);
           if(songIsSaved === "Already in playlist") {
               playlistSongs.forEach((song, i) => {
-                console.log
                 if(song.uri === uri) {
                   isAlreadyInPlaylist = true;
                   if(song["playlist"].indexOf("songsDownloadedOnDevice") === -1)
@@ -1238,10 +1187,7 @@ const changeLastSearch = (payload) => {
               songObject.imageURI = `file:///storage/emulated/0/Android/data/com.muustube/files/Images/${uri}.png`;
             }
             if(sourceIsAudio) {
-              
-              console.log("jugo", url)
               RNFFmpeg.execute(`-i ${url} file:///storage/emulated/0/Android/data/com.muustube/files/Download/${songObject.uri}.mp3`).then(result => {
-                console.log(result)
                 if(result.rc === 0) {
                   songObject[pathObjectName] = `file:///storage/emulated/0/Android/data/com.muustube/files/Download/${songObject.uri}.mp3`;
                   playlistSongs.push(songObject);
@@ -1321,7 +1267,6 @@ const changeLastSearch = (payload) => {
       // self.setState({videoListPlaylist})
       changeVideoListPlaylist(videoListPlaylist);
     }
-    console.log("PLAYList AL CIEN")
   }
 
   
@@ -1366,7 +1311,7 @@ const changeLastSearch = (payload) => {
     togglePause(true);
   }
 
-  const loadingState = () => console.log('messi')
+  const loadingState = () => {return}
 
   const scale = animation.interpolate({inputRange:[0, 1], outputRange:[30, 0], extrapolate:'clamp'});
   const opacity = animation.interpolate({inputRange:[0, 0.9, 1], outputRange:[1, 1, 0], extrapolate:'clamp'})
@@ -1435,6 +1380,7 @@ const changeLastSearch = (payload) => {
             />
             <MusicPlayer
               // {...state}
+              appIsConnected={appIsConnected}
               playNextSong={playNextSong}
               playNextSongOnScroll={playNextSongOnScroll}
               playpause={playpause}

@@ -12,16 +12,18 @@ class ScrollItems extends Component {
     render() {
         const { videos, isAudioSource, searchListStatus, item} = this.props;
         return (
-            <>
+          <>
             {videos.map((video, i) => {
-                  if(searchListStatus) {
+              const { video_thumbnail, thumbnails, imageURI } = video;
+              const thumbnail = imageURI ? imageURI : thumbnails ? thumbnails[thumbnails.length - 1].url : video_thumbnail;
+              if(searchListStatus) {
                     return (
                      <View style={{width: screenWidth, height: screenWidth, justifyContent:'center', alignItems:'center'}}
                      key={i}>
                        <RelatedThumbnails  
                         item={item}
                         isAudioSource={isAudioSource}
-                        src={{uri: video.video_thumbnail}} />
+                        src={{uri: thumbnail}} />
                      </View> 
                     );
                   }
@@ -33,7 +35,7 @@ class ScrollItems extends Component {
                       <RelatedThumbnails
                       item={item}
                       isAudioSource={isAudioSource}
-                      src={{uri: video.imageURI}} />
+                      src={{uri: thumbnail}} />
                     </View>
                   );
                 })}

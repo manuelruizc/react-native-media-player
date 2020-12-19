@@ -373,14 +373,12 @@ const MusicPlayer = (props) => {
     setLastIndex(index);
     let scrollToValue = screenWidth * index;
     if(searchListActive) {
-      console.log('USING SCROLLING');
       const video = relatedVideos[index];
       if(video == undefined) return false;
       props.playNextSongOnScroll(index, video);
       myScroll.scrollTo({x: scrollToValue, y:0,  animated: true});
     }
     else {
-      console.log('we are using this');
       index = videoListPlaylist[index] === undefined ? 0 : index;
       setLastIndex(index);
       scrollToValue = screenWidth * index;
@@ -396,7 +394,7 @@ const MusicPlayer = (props) => {
       ToastAndroid.CENTER,
     );
     // const { searchListActive, currentVideoIndex, relatedVideos, videoListPlaylist, appIsConnected } = props;
-    if(!appIsConnected) return false;
+    if(!props.appIsConnected) return false;
     let index = lastIndex + 1;
     setLastIndex(index);
     let scrollToValue = screenWidth*index;
@@ -433,7 +431,6 @@ const MusicPlayer = (props) => {
         myScroll.scrollTo({x: scrollToValue, y:0,  animated: true});
       }
       else {
-        console.log("WE USING THIS")
         index = lastIndex === 0 ? videoListPlaylist.length - 1 : lastIndex - 1;
         setLastIndex(lastIndex);
         scrollToValue = screenWidth*index;  

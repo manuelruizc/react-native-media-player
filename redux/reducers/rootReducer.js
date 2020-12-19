@@ -1,3 +1,5 @@
+import { songExists } from "../../helpers/localstorage/songExists";
+
 const initState = {
     paused: true,
     isLoadingSearch: true,
@@ -71,9 +73,21 @@ const rootReducer = (state = initState, action) => {
         }
     }
     else if(action.type === 'UPDATE_VIDEOLIST') {
+        let tempVideoList = action.payload;
+        for(let i = 0; i < tempVideoList.length; i++) {
+            const currentVideo = tempVideoList[i];
+            const uri = currentVideo.uri ? currentVideo.uri : currentVideo.id;
+            let songExistsInPhone = songExists(state.allSongs, uri, state.sourceIsAudio);
+            songExistsInPhone = songExistsInPhone.toLowerCase() === 'already downloaded';
+            if(!songExistsInPhone) continue;
+            let filteredVideo = state.allSongs.filter(song => song.uri === uri);
+            filteredVideo = filteredVideo[0];
+            if(songExistsInPhone && filteredVideo)
+                tempVideoList[i] = filteredVideo;
+        }
         return {
             ...state,
-            videoList: action.payload
+            videoList: tempVideoList
         }
     }
     else if(action.type === 'UPDATE_CURRENTVIDEO') {
@@ -131,9 +145,22 @@ const rootReducer = (state = initState, action) => {
         }
     }
     else if(action.type === 'UPDATE_RELATED_VIDEOS') {
+        let tempRelatedVideos = action.payload;
+        for(let i = 0; i < tempRelatedVideos.length; i++) {
+            const currentVideo = tempRelatedVideos[i];
+            const uri = currentVideo.uri ? currentVideo.uri : currentVideo.id;
+            let songExistsInPhone = songExists(state.allSongs, uri, state.sourceIsAudio);
+            songExistsInPhone = songExistsInPhone.toLowerCase() === 'already downloaded';
+            let filteredVideo = state.allSongs.filter(song => song.uri === uri);
+            filteredVideo = filteredVideo[0];
+            if(!tempRelatedVideos.uri)
+                tempRelatedVideos[i].uri = tempRelatedVideos[i].id;
+            if(songExistsInPhone && filteredVideo)
+                tempRelatedVideos[i] = filteredVideo;
+        }
         return {
             ...state,
-            relatedVideos: action.payload,
+            relatedVideos: tempRelatedVideos,
         }
     }
     else if(action.type === 'UPDATE_SEARCHLIST_ACTIVE') {

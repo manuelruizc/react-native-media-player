@@ -112,7 +112,6 @@ export const createInitialPaths = async () => {
   await RNFS.mkdir(path_imgs);
 }
 
-
 export const getSongsFromLocalStorage = async () => {
   let songs = await AsyncStorage.getItem("Songs");
   songs = JSON.parse(songs);
@@ -150,8 +149,6 @@ export const createDefaultPlaylits = () => {
     }
   });
 }
-
-
 
 export const initialStorageSettings = async () => {
   const storage_data = await AsyncStorage.multiGet(["currentSong", "currentPlaylist", "Songs", "SourceIsAudio", "songProgress", "lastSearch", "currentVideoItem"]);
@@ -277,7 +274,6 @@ export const initialStorageSettings = async () => {
   return response_array;
 }
 
-
 export const saveSongs = async (songObject, isAlreadyInPlaylist) => {
   let allSongs = await AsyncStorage.getItem("Songs");
   let songs = null;
@@ -292,4 +288,8 @@ export const saveSongs = async (songObject, isAlreadyInPlaylist) => {
     songs = [songObject];
   }
   return songs;
+}
+
+export const saveLastSongData = async(currentSongData) => {
+  await AsyncStorage.multiSet([["currentSong", JSON.stringify(currentSongData)], ["currentVideoItem", JSON.stringify(currentSongData)]]);
 }
