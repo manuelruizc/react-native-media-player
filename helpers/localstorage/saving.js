@@ -152,7 +152,6 @@ export const createDefaultPlaylits = () => {
 
 export const initialStorageSettings = async () => {
   const storage_data = await AsyncStorage.multiGet(["currentSong", "currentPlaylist", "Songs", "SourceIsAudio", "songProgress", "lastSearch", "currentVideoItem"]);
-  console.log("assss",storage_data);
   let status = false;
   let response_array = [];
   storage_data.forEach((store, index) => {

@@ -1,109 +1,49 @@
-import React, { Component } from 'react';
+import React, { Component, useEffect, useState } from 'react';
 import {View, Text, Button, AsyncStorage, ToastAndroid, StyleSheet, TouchableOpacity, TextInput, ScrollView} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import OptionsMenu from 'react-native-options-menu';
 import ModalPlaylists from './ModalPlaylists';
 
-class PlaylistOptions extends Component {
-    constructor(props) {
-        super(props);
 
-        this.state = {
-            playlists: [],
-            songs:[],
-            isModalActive: false,
-            text: "",
-            modalOpen: false,
-            currentPL: "",
-        }
-    }
+export default (props) => {
+    const [playlists, setPlaylists] = useState([]);
+    const [songs, setSongs] = useState([]);
+    const [isModalActive, setIsModalActive] = useState(false);
+    const [text, setText] = useState('');
+    const [modalOpen, setModalOpen] = useState(false);
+    const [currentPL, setCurrentPL] = useState('');
 
 
-    componentDidMount() {
-        const self = this;
+    useEffect(() => {
         AsyncStorage.multiGet(["Playlists", "Songs"], (err, stores) => {
             stores.forEach((store, index) => {
                 const JSONified = JSON.parse(store[1]);
                 if(JSONified != null) {
                     if(index == 0) {
-                        self.setState({playlists:JSONified})
+                        setPlaylists(JSONified);
                     }
                     else if(index == 1) {
-                        self.setState({songs:JSONified})
+                        setSongs(JSONified);
                     }
                 }
             });
         });
+    }, []);
+
+    const closeModalEdit = () => {
+        setModalOpen(false);
     }
 
-    closeModalEdit = () => {
-        this.setState({modalOpen: false});
+    const openModalEdit = (play) => {
+        setModalOpen(true);
+        setCurrentPL(play);
     }
 
-    openModalEdit = (play) => {
-        this.setState({modalOpen: true, currentPL: play});
-    }
-
-    render() {
-        const { navigation } = this.props;
-        const item = navigation.getParam('item', 'ERROR');
-        const myIcon = (<Icon name={"ios-more"} size={25} color={"#444"} style={{padding:12}} />)
-
-
-      return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-start' }}>
-            {this.state.modalOpen ? (<ModalPlaylists isPlaylistOptions={true} deletePlaylist={this.deletePlaylist} playlist={this.state.currentPL} closeModal={this.closeModalEdit} />) : false}
-            <View style={{width:'100%', height:'12%', backgroundColor: '#D3E0EC', flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingLeft:20, paddingRight:20}}>
-                <TouchableOpacity onPress={this.goBack}>
-                    <Icon name={"ios-arrow-back"} size={28} color={"#444"} />
-                </TouchableOpacity>
-                <Text style={{color:'#444', fontSize:20}}>Playlists</Text>
-                <TouchableOpacity
-                onPress={this.openModal}>
-                    <Icon name={"ios-add-circle-outline"} size={28} color={"#444"} />
-                </TouchableOpacity>
-            </View>
-          {this.state.playlists.length < 1 
-        ?
-        <View style={{width:'100%', height:'88%', alignItems:'center', justifyContent: 'center'}}>
-            <Text style={{fontSize:24}}>No tienes playlists creadas</Text>
-        </View>
-        :
-        <ScrollView style={{width:'100%', backgroundColor:'#D3E0EC'}}>
-            {this.state.playlists.map(play => 
-                play == "songsDownloadedOnDevice" || play == "favorites__Playlist" ?
-                null
-                :
-                (
-                <TouchableOpacity onLongPress={() => this.openModalEdit(play)} onPress={() => this.addToPlaylist(play)} key={play} style={{borderBottomWidth:1, borderColor:'#ea4c89', paddingTop: 20, paddingBottom: 20, paddingLeft: 35, flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
-                    <Text style={{color:'#444'}}>{play}</Text>
-                    {/*<OptionsMenu
-                        customButton={myIcon}
-                        destructiveIndex={1}
-                        options={["Agregar", "Eliminar"]}
-                        actions={[() => this.addToPlaylist(play), () => this.deletePlaylist(play)]}
-                    />*/}
-                </TouchableOpacity>
-                )
-            )}
-        </ScrollView>}
-          <View style={this.state.isModalActive ? styles.modalActive : styles.modalNotActive} >
-            <TouchableOpacity style={{width:'100%', height:'100%', backgroundColor:'transparent', position:'absolute', top:0, left:0, bottom:0, right:0}} onPress={this.closeModal}></TouchableOpacity>
-            <View style={{width:'80%', height:'30%', backgroundColor:'white', zIndex:30, justifyContent:'space-around', alignItems:'center', paddingTop:15, paddingBottom:15, borderRadius:15}}>
-                <TextInput
-                onChangeText={(text) => this.setState({text})}
-                value={this.state.text}
-                style={{width:'85%', height: '35%', borderWidth:1, borderColor:'gray', fontSize:16, paddingLeft:10, borderRadius:50}}></TextInput>
-                <TouchableOpacity onPress={this.createPlaylist} style={{padding:15, width:'65%', borderRadius:50, backgroundColor:'#303F9F'}}>
-                    <Text style={{color:'#444', textAlign:'center', fontSize:14}}>Crear playlist</Text>
-                </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      );
-    }
-    goBack = () => {
-        this.props.navigation.goBack()
+    
+    
+      
+    const goBack = () => {
+        props.navigation.goBack()
     }
 
     deletePlaylist = (key) => {
@@ -134,42 +74,34 @@ class PlaylistOptions extends Component {
             });
             jsonSongs = JSON.stringify(jsonSongs);
             jsonPlaylists = JSON.stringify(jsonPlaylists);
-
+            
             AsyncStorage.multiSet([['Playlists', jsonPlaylists], ['Songs', jsonSongs]], () => {
                 ToastAndroid.showWithGravity(
                     `Playlist deleted`,
                     ToastAndroid.SHORT,
                     ToastAndroid.CENTER,
                   );
-                  this.setState({playlists: JSON.parse(jsonPlaylists)});
-                  console.log('asdasd', jsonSongs)
+                  setPlaylists(JSON.parse(jsonPlaylists));
             });
         });
     }
-
-    openModal = () => {
-        this.setState({isModalActive: true})
     
+    openModal = () => {
+        setIsModalActive(true);
+        
     }
     closeModal = () => {
-        this.setState({isModalActive: false})
-    }
-
-    componentWillReceiveProps(newProps) {
-        console.log("newProps",newProps);
-        
+        setIsModalActive(false);
     }
 
     addToPlaylist = async (key) => {
-        const self  = this;
-        const item = this.props.navigation.getParam('item', 'ERROR');
+        const item = props.navigation.getParam('item', 'ERROR');
         let {channel, title, uri, time, imageURI, } = item;
-        console.log(item);
         channel = channel === undefined ? "Unknown" : channel;
 
         let songObject = {playlist: [key], imageURI, channel, title, uri, time, path: "", isDownloaded: false, customName: false, customArtist: false};
         if(imageURI != `file:///storage/emulated/0/Android/data/com.muustube/files/Images/${uri}.png`) {
-            self.props.screenProps.downloadImage(imageURI, uri);
+            props.screenProps.downloadImage(imageURI, uri);
             songObject.imageURI = `file:///storage/emulated/0/Android/data/com.muustube/files/Images/${uri}.png`;
         }
         if(item != 'ERROR') {
@@ -200,14 +132,11 @@ class PlaylistOptions extends Component {
                         });
 
                         if(!isSavedAlready) {
-                            songObject["playlistsIndex"] = songObject["playlistsIndex"] === undefined ? {[key]: newIndexPlaylist} : {...songObject["playlistsIndex"], [key]: newIndexPlaylist};;
-                            console.log(songObject)
+                            songObject["playlistsIndex"] = songObject["playlistsIndex"] === undefined ? {[key]: newIndexPlaylist} : {...songObject["playlistsIndex"], [key]: newIndexPlaylist};
                             newSongsArray.push(songObject);
                         }
 
-                        console.log("FEDERERERERERERE", newSongsArray)
-                        //songs.push(songObject)
-                        self.props.screenProps.addToAllSongs(newSongsArray);
+                        props.screenProps.addToAllSongs(newSongsArray);
                         songs = JSON.stringify(newSongsArray);
                         AsyncStorage.setItem("Songs", songs)
                         .then(response => {
@@ -216,8 +145,8 @@ class PlaylistOptions extends Component {
                                 ToastAndroid.SHORT,
                                 ToastAndroid.CENTER,
                               );
-                            this.props.navigation.goBack()
-                            this.props.screenProps.updatePlaylistAfterDownload();
+                            props.navigation.goBack()
+                            props.screenProps.updatePlaylistAfterDownload();
                         })
                         .catch(error => console.log(error))
                     }
@@ -232,8 +161,8 @@ class PlaylistOptions extends Component {
                                 ToastAndroid.SHORT,
                                 ToastAndroid.CENTER,
                               );
-                            this.props.navigation.goBack()
-                            this.props.screenProps.updatePlaylistAfterDownload();
+                            props.navigation.goBack()
+                            props.screenProps.updatePlaylistAfterDownload();
                         })
                         .catch(error => console.log(error))
                     }
@@ -254,34 +183,85 @@ class PlaylistOptions extends Component {
           catch(exception) {
             return false;
           }
-    }
+        }
 
     createPlaylist = async () => {
         try {
             let playlists = await AsyncStorage.getItem("Playlists");
             playlists = JSON.parse(playlists);
-            let playlistTitleExists = playlists.includes(this.state.text);
-            let self = this;
+            let playlistTitleExists = playlists.includes(text);
 
             if(!playlistTitleExists) {
-                playlists.push(this.state.text);
-                this.setState({playlists})
+                playlists.push(text);
+                setPlaylists(playlists);
                 playlists = JSON.stringify(playlists);
-                console.log(playlists)
                 await AsyncStorage.setItem("Playlists", playlists)
                 .then(response => {
-                    self.setState({text: "", isModalActive: false,})
+                    setText('');
+                    setIsModalActive(false);
                 })
                 .catch(error => console.log(error));
             }
             else {
-                console.log("Ya existe")
+                ToastAndroid.showWithGravity(
+                    `Already exists`,
+                    ToastAndroid.SHORT,
+                    ToastAndroid.CENTER,
+                );
             }
           }
           catch(error) {
-            console.log(error);
-          }
-    }
+              console.log(error);
+            }
+        }
+        const { navigation } = props;
+        const item = navigation.getParam('item', 'ERROR');
+        const myIcon = (<Icon name={"ios-more"} size={25} color={"#444"} style={{padding:12}} />)
+        return (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-start' }}>
+                {modalOpen && (<ModalPlaylists isPlaylistOptions={true} deletePlaylist={deletePlaylist} playlist={currentPL} closeModal={closeModalEdit} />)}
+                <View style={{width:'100%', height:'12%', backgroundColor: '#D3E0EC', flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingLeft:20, paddingRight:20}}>
+                    <TouchableOpacity onPress={goBack}>
+                        <Icon name={"ios-arrow-back"} size={28} color={"#444"} />
+                    </TouchableOpacity>
+                    <Text style={{color:'#444', fontSize:20}}>Playlists</Text>
+                    <TouchableOpacity
+                    onPress={openModal}>
+                        <Icon name={"ios-add-circle-outline"} size={28} color={"#444"} />
+                    </TouchableOpacity>
+                </View>
+              {playlists.length < 1 
+            ?
+            <View style={{width:'100%', height:'88%', alignItems:'center', justifyContent: 'center'}}>
+                <Text style={{fontSize:24}}>No tienes playlists creadas</Text>
+            </View>
+            :
+            <ScrollView style={{width:'100%', backgroundColor:'#D3E0EC'}}>
+                {playlists.map(play => 
+                    play == "songsDownloadedOnDevice" || play == "favorites__Playlist" ?
+                    null
+                    :
+                    (
+                    <TouchableOpacity onLongPress={() => openModalEdit(play)} onPress={() => addToPlaylist(play)} key={play} style={{borderBottomWidth:1, borderColor:'#ea4c89', paddingTop: 20, paddingBottom: 20, paddingLeft: 35, flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
+                        <Text style={{color:'#444'}}>{play}</Text>
+                    </TouchableOpacity>
+                    )
+                )}
+            </ScrollView>}
+              <View style={isModalActive ? styles.modalActive : styles.modalNotActive} >
+                <TouchableOpacity style={{width:'100%', height:'100%', backgroundColor:'transparent', position:'absolute', top:0, left:0, bottom:0, right:0}} onPress={closeModal}></TouchableOpacity>
+                <View style={{width:'80%', height:'30%', backgroundColor:'white', zIndex:30, justifyContent:'space-around', alignItems:'center', paddingTop:15, paddingBottom:15, borderRadius:15}}>
+                    <TextInput
+                    onChangeText={(text) => setText(text)}
+                    value={text}
+                    style={{width:'85%', height: '35%', borderWidth:1, borderColor:'gray', fontSize:16, paddingLeft:10, borderRadius:50}}></TextInput>
+                    <TouchableOpacity onPress={createPlaylist} style={{padding:15, width:'65%', borderRadius:50, backgroundColor:'#303F9F'}}>
+                        <Text style={{color:'#444', textAlign:'center', fontSize:14}}>Create playlist</Text>
+                    </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          );
   }
 
   const styles = StyleSheet.create({
@@ -301,6 +281,4 @@ class PlaylistOptions extends Component {
     modalNotActive: {
         display:'none'
     }
-  });
-
-export default PlaylistOptions;
+});

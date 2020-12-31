@@ -296,16 +296,16 @@ const MusicPlayer = (props) => {
     props.downloadSong(item)
   }
 
-  const updateInfoTime = (currentTime) => {
-    setCurrentTime(currentTime);
-    setCurrentTimeWhenSliding(currentTime);
+  const updateInfoTime = (currentTime_) => {
+    setCurrentTime(currentTime_);
+    setCurrentTimeWhenSliding(currentTime_);
   }
 
-  const onSlidingComplete = (currentTime) => {
-    setCurrentTime(currentTime);
-    setCurrentTimeWhenSliding(currentTime);
+  const onSlidingComplete = (currentTime_) => {
+    setCurrentTime(currentTime_);
+    setCurrentTimeWhenSliding(currentTime_);
     setSlidingActive(false);
-    player.seek(currentTime);
+    player.seek(currentTime_);
   }
 
   const onSlidingStart = () => {
@@ -322,11 +322,11 @@ const MusicPlayer = (props) => {
 
   const Progress = (info) => {
     if(timeAvailable) return;
-    let {currentTime} = info;
-    currentTime = Math.round(Number(currentTime));
+    let currentTime_ = info.currentTime;
+    currentTime_ = Math.round(Number(currentTime_));
     setSeconds(seconds + 1);
     if(!timeAvailable) {
-        setCurrentTime(currentTime);
+        setCurrentTime(currentTime_);
     }
   }
 
@@ -415,11 +415,11 @@ const MusicPlayer = (props) => {
   }
 
   const prevSong = () => {
-    currentTime = Math.round(Number(currentTime));
+    let currentTime_ = Math.round(Number(currentTime));
     // const { searchListActive, currentVideoIndex, relatedVideos, videoListPlaylist } = props;
     let index = 0;
     let scrollToValue = 0;
-    if(currentTime < 2) {
+    if(currentTime_ < 2) {
 
       if(searchListActive) {
         index = lastIndex === 0 ? relatedVideos.length - 1 : lastIndex - 1;

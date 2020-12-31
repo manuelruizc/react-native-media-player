@@ -67,7 +67,7 @@ const App = () => {
   const [loadingBubble, setLoadingBubble] = useState(true);
   const [appIsConnected, setAppIsConnected] = useState(true);
   const [splashScreenIsActive, setSplashScreenIsActive] = useState(true);
-  const [firstURI, setFirstURI] = useState('2UcZWXvgMZE')
+  const [firstURI, setFirstURI] = useState('2UcZWXvgMZE');
   // downloadPath: `${RNFS.DocumentDirectoryPath}`,
   // ******
   // playerOptions: {
@@ -318,7 +318,6 @@ const changeLastSearch = (payload) => {
   useEffect(async() => {
     await createInitialPaths();
 
-    const downloadedSongsList = await getSongsFromLocalStorage();
     initialServiceSetup(togglePause, playNextSong);
     
 
@@ -330,17 +329,14 @@ const changeLastSearch = (payload) => {
     const subscription = NetInfo.isConnected.addEventListener('connectionChange', listener);
 
 
-    // this.createDownloadsPlaylist();
     createDefaultPlaylits();
 
-    // CHECK THIS!!!!
     const initial_storage_response = await initialStorageSettings();
     if(initial_storage_response.length === 0) {
       changeSplashState();
       return true;
     }
     initial_storage_response.forEach((object, index) => {
-      // this.setState(object);
       if(index === 0) {
         setUpStorageDataToStoreCurrentVideo(object);
       }
@@ -356,6 +352,33 @@ const changeLastSearch = (payload) => {
     });
     return true;
   }, []);
+
+  const SongIsDownloadedInSource = (array, object) => {
+    const pathName = object.sourceIsAudio ? 'pathAudio' : 'pathVideo';
+    // const exists = array.find(x => x.uri === object.uri && x[pathName]);
+    let exists = false;
+    for(let i = array.length - 1; i >= 0; i--) {
+      const song = array[i];
+      console.log(song);
+      if(song.uri === object.uri && song[pathName]) {
+        exists = true;
+        break;
+      }
+    }
+    console.log(exists);
+    return exists;
+  }
+  useEffect(() => {
+    let tempDownloadingVideoKey = downloadingVideoKey;
+    for(let i = tempDownloadingVideoKey.length - 1; i >= 0; i--) {
+      const currentVideoObject = tempDownloadingVideoKey[i];
+      const exists = SongIsDownloadedInSource(allSongs, currentVideoObject);
+      if(exists)
+        tempDownloadingVideoKey.splice(i, 1);
+    }
+    console.log(tempDownloadingVideoKey);
+    changeDownloadingVideoKey(tempDownloadingVideoKey);
+  }, [allSongs])
   
   const setUpStorageDataToStore = (object) => {
     const keys = Object.keys(object);
@@ -408,6 +431,7 @@ const changeLastSearch = (payload) => {
       }
     }
   }
+
   const setUpStorageDataToStoreCurrentVideo = (object) => {
     const keys = Object.keys(object);
     const values = Object.values(object);
@@ -596,7 +620,6 @@ const changeLastSearch = (payload) => {
       }
       return video;
     });
-    // this.setState({videoList});
     changeVideoList(videoList);
   }
 
@@ -812,23 +835,7 @@ const changeLastSearch = (payload) => {
         changeImageURI(videoInfo.imageURI);
         changeVideoChannel(videoInfo.channel);
         changeVideoTitle(videoInfo.title);
-        updateLastSongData(videoInfo, newIndex)
-
-        // this.setState(
-        //   {
-        //     currentVideo: self.state.sourceIsAudio ? videoInfo.pathAudio : videoInfo.pathVideo,
-        //     currentVideoIndex: newIndex,
-        //     currentVideoKey: videoInfo.uri,
-        //     imageURI: videoInfo.imageURI,
-        //     isLoading:false,
-        //     videoChannel: videoInfo.channel,
-        //     videoTitle: videoInfo.title,
-        //     videoIsDownloaded: true
-        //   }, () => {
-        //     // self.setState({isLoadingSong: false,})
-        //   }
-        // );
-        
+        updateLastSongData(videoInfo, newIndex);
       }
       else {
         axios.get(`https://tubeplaya.herokuapp.com/video_info/${videoInfo.uri}`)
@@ -1060,7 +1067,7 @@ const changeLastSearch = (payload) => {
   }
 
   const downloadSong = async (item, currentArtist = false, currentSong = false) => {
-    let {channel, uri, imageURI, playlist, time, title} = item;
+    let { channel, uri, imageURI, playlist, time, title } = item;
     let timeInSeconds = time.length <= 5 ? Number(time.substring(0, time.length - 3)) : 100;
     channel = channel === undefined ? "unknown" : channel;
     let newSongsArray = [];
@@ -1068,11 +1075,13 @@ const changeLastSearch = (payload) => {
     try {
       let newSongs = await AsyncStorage.getItem('Songs');
       if(newSongs == null) {
-        isDownloadingSongStatus(true, uri);
+        isDownloadingSongStatus(uri);
         axios.get(`https://tubeplaya.herokuapp.com/video_info/${uri}`)
         .then(function (response) {
           let tempDownloadingVideoKey = downloadingVideoKey;
-          tempDownloadingVideoKey.push(uri);
+          console.log('downloadingVideoKey', tempDownloadingVideoKey);
+          tempDownloadingVideoKey.push({ uri, sourceIsAudio});
+          console.log('downloadingVideoKeyAfterPush', tempDownloadingVideoKey);
           // self.setState({downloadingVideoKey});
           changeDownloadingVideoKey(tempDownloadingVideoKey);
           // media current format
@@ -1134,9 +1143,11 @@ const changeLastSearch = (payload) => {
 
         axios.get(`https://tubeplaya.herokuapp.com/video_info/${uri}`)
         .then(function (response) {
-          let tempDownloadingKey = downloadingVideoKey;
-          tempDownloadingKey.push(uri);
-          changeDownloadingVideoKey(tempDownloadingKey);
+          let tempDownloadingVideoKey = downloadingVideoKey;
+          console.log('downloadingVideoKey', tempDownloadingVideoKey);
+          tempDownloadingVideoKey.push({uri, sourceIsAudio});
+          console.log('downloadingVideoKeyAfterPush', tempDownloadingVideoKey);
+          changeDownloadingVideoKey(tempDownloadingVideoKey);
           // self.setState({downloadingVideoKey});
           
           // media current format
@@ -1168,6 +1179,7 @@ const changeLastSearch = (payload) => {
               });
             }
             else if(songIsSaved === "Not existing") {
+              console.log('hereeee')
               songObject = {
                 playlist: ["songsDownloadedOnDevice"],
                 channel,
@@ -1195,6 +1207,7 @@ const changeLastSearch = (payload) => {
                   saveSongInLocalStorage(songObject, uri, isAlreadyInPlaylist);
                 }
                 else {
+                  console.log(downloadingVideoKey)
                   deleteFromQueue(uri);
                   ToastAndroid.showWithGravity(
                     "Video not available in your region",
@@ -1220,8 +1233,15 @@ const changeLastSearch = (payload) => {
   
 
   const deleteFromQueue = (uri) => {
+    return;
     let tempDownloadingVideoKey = downloadingVideoKey;
+    const date = new Date();
+    console.log(uri)
+    console.log(date);
+    console.log('downloadingVideoKeyDeleteFrom', tempDownloadingVideoKey);
     tempDownloadingVideoKey = tempDownloadingVideoKey.filter(dld => dld != uri);
+    console.log('downloadingVideoKeyDeleted????', tempDownloadingVideoKey);
+    console.log(date);
     // this.setState({downloadingVideoKey});
     changeDownloadingVideoKey(tempDownloadingVideoKey);
   }
@@ -1235,7 +1255,7 @@ const changeLastSearch = (payload) => {
 
     AsyncStorage.setItem("Songs", allSongs)
     .then(res => {
-      deleteFromQueue(uri);
+    
       getSongsAndUpdate();
     })
     .catch(error => console.log(error))

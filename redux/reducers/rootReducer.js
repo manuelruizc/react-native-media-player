@@ -212,6 +212,7 @@ const rootReducer = (state = initState, action) => {
         }
     }
     else if(action.type === 'UPDATE_DOWNLOADING_VIDEO_KEY') {
+        console.log(action);
         return {
             ...state,
             downloadingVideoKey: action.payload,
