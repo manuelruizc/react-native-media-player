@@ -13,6 +13,7 @@ import { Artist, ArtistSmall, SongInfoContainer, Title, TitleSmall } from './com
 import SmallPlayer, { CurrentVideoThumbnail, VideoInfoContainer, VideoTitleContainer } from './components/players/SmallPlayer';
 import { useDispatch, useSelector } from 'react-redux';
 import { togglePause, useTogglePause } from '../../redux/actions/storeActions';
+import MusicControl from 'react-native-music-control';
 
 const screenWidth = Dimensions.get('window').width;
 const window = Dimensions.get('window');
@@ -71,6 +72,14 @@ const MusicPlayer = (props) => {
   const toggleMusicPlayerFullScreen = () => {
     dispatch({type: 'TOGGLE_PLAYER_FULLSCREEN'});
   }
+
+  const fullscreen = musicPlayerFullScreen;
+  const downloaded = videoIsDownloaded; 
+  const isAudioSource = sourceIsAudio;
+  const item = currentVideoItem === null ? null : currentVideoItem;
+  const title = item === null ? 'videoTitle' : !item.customName ? item.title : item.customName;
+  const artist = item === null ? 'videoChannel' : !item.customArtist ? item.channel : item.customArtist;
+  const currentBackgroundImageSource = currentVideoItem.imageURI;
  
     useEffect(() => {
       // let { songProgress, currentVideoIndex, searchListActive } = props;
@@ -121,7 +130,6 @@ const MusicPlayer = (props) => {
     // }, [props.currentVideoIndex]);
 
     useEffect(() => {
-      // const { relatedVideos, searchListActive, videoListPlaylist, currentVideoIndex } = props;
       const videos = searchListActive ? relatedVideos : videoListPlaylist;
       const video = videos[currentVideoIndex];
       let id = null;
@@ -133,7 +141,15 @@ const MusicPlayer = (props) => {
       }
     }, [allSongs, currentVideoIndex]);
 
-
+    useEffect(() => {
+      MusicControl.updatePlayback({
+        state: isPaused ? MusicControl.STATE_PAUSED : MusicControl.STATE_PLAYING,
+        elapsedTime: 135,
+        title,
+        artwork: currentBackgroundImageSource,
+        artist,
+      })
+    }, [currentVideoItem, isPaused]);
     // componentWillReceiveProps(newProps) {
     //   const { searchListActive, currentVideoIndex, musicPlayerFullScreen } = newProps;
     //   const sls = props.searchListActive;
@@ -445,16 +461,6 @@ const MusicPlayer = (props) => {
     }
   }
 
-
-  // const isPaused = props.paused;
-  const fullscreen = musicPlayerFullScreen;
-  const downloaded = videoIsDownloaded; 
-  const isAudioSource = sourceIsAudio;
-  const item = currentVideoItem === null ? null : currentVideoItem;
-  const title = item === null ? 'videoTitle' : !item.customName ? item.title : item.customName;
-  const artist = item === null ? 'videoChannel' : !item.customArtist ? item.channel : item.customArtist;
-  const currentBackgroundImageSource = currentVideoItem.imageURI;
-  // const { relatedVideos, searchListActive, videoListPlaylist, currentPlaylistName, currentVideoIndex, currentVideoKey, allSongs } = props;
 
   let list_of_videos = searchListActive ? relatedVideos : videoListPlaylist;
   if(!searchListActive && list_of_videos.length > 0 && currentPlaylistName != 'songsDownloadedOnDevice' && currentPlaylistName != "searchbar") {
