@@ -627,6 +627,7 @@ const changeLastSearch = (payload) => {
 
   // ????? fixed ?
   const playNewSong = (paused, index, songData = false) => {
+    updateMusicControls(true);
       if(songData != false) {
         updateLastSongData(songData, index);
       }
@@ -717,6 +718,9 @@ const changeLastSearch = (payload) => {
   
   //????
   const playNextSong = (prev = null, dontPlay = false, index = null, isPaused = null) => {
+    updateMusicControls(true);
+
+    
     const currentIndex = currentVideoIndex;
     let nextIndex = prev ? currentIndex - 1 : currentIndex + 1;
     const vidl = playlistSource != "playlist" ? videoList : videoListPlaylist;
@@ -1310,7 +1314,16 @@ const changeLastSearch = (payload) => {
       MusicControl.enableControl('previousTrack', true);
   }
 
-  
+  const updateMusicControls = (willPlay = false) => {
+    const tempPaused = willPlay ? false : paused;
+    MusicControl.updatePlayback({
+      state: tempPaused ? MusicControl.STATE_PAUSED : MusicControl.STATE_PLAYING,
+      elapsedTime: 135,
+      title: videoTitle,
+      artwork: imageURI, // URL or RN's image require()
+      artist: videoChannel,
+    })
+  }
 
 
   // creating functions to make it work lmao

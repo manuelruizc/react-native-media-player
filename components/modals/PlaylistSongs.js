@@ -553,7 +553,7 @@ export default (props) => {
                     saveCurrentOrder={saveCurrentOrder}
                 />
                 {
-                !(cameFrom === 'Downloads') &&
+                cameFrom === 'Downloads' &&
                 <EditPlaylistOrderButton
                     isEditingActive={isEditingActive}
                     saveCurrentOrder={saveCurrentOrder}
@@ -587,10 +587,9 @@ export default (props) => {
                     playSong={playSong}
                     index={index}
                     play={play}
-                    paused={props.screenProps.paused}
                 />
                 <ItemData>
-                    <ItemTitle play={play} downloadingVideoKey={downloadingVideoKey} pathName={pathName}>{!play.customName ? play.title : play.customName}</ItemTitle>
+                    <ItemTitle play={play} downloadingVideoKey={downloadingVideoKey}>{!play.customName ? play.title : play.customName}</ItemTitle>
                     <ItemArtist>{!(play.customArtist) ? play.channel : play.customArtist}</ItemArtist>
                 </ItemData>
                 {play.isDownloaded ?
@@ -695,8 +694,7 @@ const PlayButton = ({
     togglePause,
     playSong,
     index,
-    play,
-    paused
+    play
 }) => {
     if(currentVideoKey === play.uri) {
         return (
@@ -704,7 +702,7 @@ const PlayButton = ({
                 style={stylesPlaylistsSongs.playButtonContainer}
                 onPress={togglePause}
             >
-                {paused ?
+                {props.screenProps.paused ?
                 (<Icon name={"ios-play"} size={15} color={"#5B4F5F"} />)
                 :
                 (<Icon name={"ios-pause"} size={15} color={"#5B4F5F"} />)}
@@ -724,8 +722,7 @@ const ItemData = ({ children }) => <View style={stylesPlaylistsSongs.itemData}>{
 const ItemTitle = ({
     play,
     downloadingVideoKey,
-    children,
-    pathName
+    children
 }) => {
     return (
         <Text
@@ -775,7 +772,7 @@ const stylesPlaylistsSongs = StyleSheet.create({
         fontSize:20
     },
     editButton: {
-        fontSize:20,
+        fontSize:30,
         color: 'rgba(255, 255, 255, 0.5)'
     },
     downloadButtonContainer: {
