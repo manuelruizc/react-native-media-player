@@ -18,7 +18,20 @@ import RNFS from "react-native-fs";
 import OptionsMenu from "react-native-options-menu";
 import SortableList from "react-native-sortable-list";
 import Icon from "react-native-vector-icons/Ionicons";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  __togglePause,
+  __updateAllSongs,
+  __updateCurrentVideo,
+  __updateCurrentVideoIndex,
+  __updateCurrentVideoKey,
+  __updateImageURI,
+  __updateSearchListActive,
+  __updateSongProgress,
+  __updateVideoChannel,
+  __updateVideoListPlaylist,
+  __updateVideoTitle,
+} from "../../redux/actions/actionNames";
 import EditSong from "./EditSong";
 
 const window = Dimensions.get("window");
@@ -32,11 +45,11 @@ const BothSources = (props) => {
       customButton={myIcon}
       destructiveIndex={1}
       options={[
-        "Editar",
-        "Agregar a playlist",
-        "Eliminar de playlist",
-        "Eliminar del dispositivo",
-        "Eliminar completamente (both)",
+        "Edit",
+        "Add to playlist",
+        "Delete from playlist",
+        "Delete from device (keep on playlist)",
+        "Delete from device and playlist",
       ]}
       actions={[
         () => props.openEditModal(play),
@@ -56,11 +69,11 @@ const OneSource = (props) => {
       customButton={myIcon}
       destructiveIndex={1}
       options={[
-        "Editar",
-        "Agregar a playlist",
-        "Eliminar de playlist",
-        "Eliminar del dispositivo",
-        "Eliminar completamente",
+        "Edit",
+        "Add to playlist",
+        "Delete from playlist",
+        "Delete from device (keep on playlist)",
+        "Delete from device and playlist",
       ]}
       actions={[
         () => props.openEditModal(play),
@@ -79,12 +92,7 @@ const Offline = (props) => {
     <OptionsMenu
       customButton={myIcon}
       destructiveIndex={1}
-      options={[
-        "Editar",
-        "Descargar",
-        "Agregar a playlist",
-        "Eliminar de playlist",
-      ]}
+      options={["Edit", "Download", "Add to playlist", "Delete from playlist"]}
       actions={[
         () => props.openEditModal(play),
         () => props.downloadSong(play),
@@ -96,8 +104,88 @@ const Offline = (props) => {
 };
 
 export default (props) => {
-  console.log(props);
+  const dispatch = useDispatch();
+  const changeAllSongs = (payload) => {
+    dispatch({
+      type: __updateAllSongs,
+      payload,
+    });
+  };
+  const changeVideoChannel = (payload) => {
+    dispatch({
+      type: __updateVideoChannel,
+      payload,
+    });
+  };
+  // 3
+  const changeVideoTitle = (payload) => {
+    dispatch({
+      type: __updateVideoTitle,
+      payload,
+    });
+  };
+  const changeSearchListStatus = (payload) => {
+    // this.setState({searchListActive: boolean});
+    dispatch({
+      type: __updateSearchListActive,
+      payload,
+    });
+  };
+  const changeImageURI = (payload) => {
+    dispatch({
+      type: __updateImageURI,
+      payload,
+    });
+  };
+  // 8
+  const changeCurrentVideo = (payload) => {
+    dispatch({
+      type: __updateCurrentVideo,
+      payload,
+    });
+  };
+  // 9
+  const changeCurrentVideoKey = (payload) => {
+    dispatch({
+      type: __updateCurrentVideoKey,
+      payload,
+    });
+  };
+  const changeVideoListPlaylist = (payload) => {
+    dispatch({
+      type: __updateVideoListPlaylist,
+      payload,
+    });
+  };
+  const changeCurrentVideoIndex = (payload) => {
+    dispatch({
+      type: __updateCurrentVideoIndex,
+      payload,
+    });
+  };
+  // 19
+  const changeSongProgress = (payload) => {
+    dispatch({
+      type: __updateSongProgress,
+      payload,
+    });
+  };
+  // 20
+  const togglePause = (payload = null) => {
+    if (payload === null) {
+      return dispatch({
+        type: __togglePause,
+      });
+    }
+    dispatch({
+      type: __togglePause,
+      payload,
+    });
+  };
   const allSongs = useSelector((state) => state.allSongs);
+  const downloadingVideoKey = useSelector((state) => state.downloadingVideoKey);
+  const currentVideoKey = useSelector((state) => state.currentVideoKey);
+  const paused = useSelector((state) => state.paused);
   const [songs, setSong] = useState([]);
   const [isModalActive, setIsModalActive] = useState(false);
   const [isLoadingLocalStorage, setIsLoadingLocalStorage] = useState(true);
@@ -106,15 +194,14 @@ export default (props) => {
   const [currentOrder, setCurrentOrder] = useState([]);
   const [isEditingActive, setIsEditingActive] = useState(false);
 
-  const loadSongs = (songs = null) => {
+  const loadSongs = (songs = null, where = "idk") => {
     const key = props.navigation.getParam("key", "error");
     const cameFrom = props.navigation.getParam("comeFrom", "ERROR");
     const sourceIsAudio = props.screenProps.sourceIsAudio;
     const pathName = sourceIsAudio ? "isAudio" : "isVideo";
     const ext = pathName === "path" ? "mp3" : "mp4";
-    let tempAllSongs = [...allSongs];
-    tempAllSongs = songs === null ? tempAllSongs : songs;
-    // setSong(tempAllSongs);
+    let tempAllSongs = songs;
+    tempAllSongs = songs === null ? allSongs : songs;
     if (cameFrom == "Playlists") {
       tempAllSongs = tempAllSongs.filter((json) => json.playlist.includes(key));
       tempAllSongs.sort(function (a, b) {
@@ -131,13 +218,16 @@ export default (props) => {
         });
       }
     }
-    setSong(tempAllSongs);
+    setSong([...tempAllSongs]);
     setIsLoadingLocalStorage(false);
   };
 
   useEffect(() => {
     loadSongs();
   }, []);
+  useEffect(() => {
+    loadSongs(allSongs, "lhf");
+  }, [allSongs]);
 
   const closeEditModal = () => {
     setIsEditModalActive(false);
@@ -157,13 +247,9 @@ export default (props) => {
       }
     });
   };
-  useEffect(() => {
-    console.log("allSongs", allSongs);
-    loadSongs(allSongs);
-  }, [allSongs]);
 
   const { navigation } = props;
-  const { sourceIsAudio, downloadingVideoKey } = props.screenProps;
+  const { sourceIsAudio } = props.screenProps;
   const pathName = sourceIsAudio ? "isAudio" : "isVideo";
   const key = navigation.getParam("key", "ERROR");
   const cameFrom = navigation.getParam("comeFrom", "ERROR");
@@ -174,10 +260,6 @@ export default (props) => {
 
   const downloadSong = (item) => {
     props.screenProps.downloadSong(item);
-  };
-
-  const togglePause = () => {
-    props.screenProps.togglePause();
   };
 
   const playSong = (index, songData) => {
@@ -192,27 +274,25 @@ export default (props) => {
       uri,
       imageURI,
     } = songData;
-    const pathName = props.screenProps.sourceIsAudio
-      ? "pathAudio"
-      : "pathVideo";
+    const pathName = sourceIsAudio ? "pathAudio" : "pathVideo";
 
-    props.screenProps.updateLastPlaylist(songs, "playlist", key);
-    props.screenProps.searchListStatus(false);
-    props.screenProps.setSongProgress(0, false);
+    changeVideoListPlaylist(songs, "playlist", key);
+    changeSearchListStatus(false);
+    changeSongProgress(0, false);
 
     if (isDownloaded) {
-      props.screenProps.currentVideoURIChange(songData[pathName]);
-      props.screenProps.currentVideoKeyChange(uri);
-      props.screenProps.currentVideoURImage(imageURI);
-      props.screenProps.changeVideoChannel(channel);
-      props.screenProps.changeVideoTitle(title);
+      changeCurrentVideo(songData[pathName]);
+      changeCurrentVideoKey(uri);
+      changeImageURI(imageURI);
+      changeVideoChannel(channel);
+      changeVideoTitle(title);
       props.screenProps.playNewSong(false, index, songData, key);
       props.screenProps.loadingState(false);
       props.screenProps.changeVideoDownloadStatus(true);
     } else {
       props.screenProps.playIndexSong(index, songData, null, true, songs);
     }
-    props.screenProps.currentVideoIndexChange(index);
+    changeCurrentVideoIndex(index);
   };
 
   const openModal = () => {
@@ -234,27 +314,24 @@ export default (props) => {
             if (response != null) {
               let songs = JSON.parse(response);
               songs.push(songObject);
-              props.screenProps.addToAllSongs(songs);
+              changeAllSongs(songs);
               AsyncStorage.setItem("Songs", JSON.stringify(songs))
-                .then((response) => {
-                  console.log(response);
-                })
-
-                .catch((error) => console.log(error));
+                .then((response) => {})
+                .catch((error) => console.error(error));
             } else {
               let songs = [songObject];
-              props.screenProps.addToAllSongs(songs);
+              changeAllSongs(songs);
               songs = JSON.stringify(songs);
               AsyncStorage.setItem("Songs", songs)
                 .then((response) => {
-                  console.log(response);
+                  console.error(response);
                 })
-                .catch((error) => console.log(error));
+                .catch((error) => console.error(error));
             }
           })
-          .catch((error) => console.log(error));
+          .catch((error) => console.error(error));
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     }
   };
@@ -289,7 +366,7 @@ export default (props) => {
           jsonSongs = jsonSongs.filter((song) => song.playlist.length > 0);
         }
       });
-      props.screenProps.addToAllSongs(jsonSongs);
+      changeAllSongs(jsonSongs);
       jsonSongs = JSON.stringify(jsonSongs);
 
       AsyncStorage.multiSet([["Songs", jsonSongs]], () => {
@@ -326,7 +403,7 @@ export default (props) => {
 
     const path = `file:///storage/emulated/0/Android/data/com.muustube/files/Download/${key}${extension}`;
 
-    if (key == props.screenProps.currentVideoKey) {
+    if (key == currentVideoKey) {
       self.props.screenProps.playNextSong();
     }
 
@@ -336,7 +413,6 @@ export default (props) => {
 
     RNFS.exists(path)
       .then((result) => {
-        console.log(result);
         if (result) {
           return (
             RNFS.unlink(path)
@@ -385,13 +461,9 @@ export default (props) => {
                     }
 
                     setSong(JSONified);
-                    props.screenProps.addToAllSongs(JSONified);
+                    changeAllSongs(JSONified);
                     if (isCurrentPlaylist) {
-                      props.screenProps.updateLastPlaylist(
-                        songs,
-                        "playlist",
-                        key
-                      );
+                      changeVideoListPlaylist(songs, "playlist", key);
                     }
                   });
                 });
@@ -432,7 +504,7 @@ export default (props) => {
                   jsonSongs = jsonSongs.filter((song) => song.uri != key);
                   jsonSongs = JSON.stringify(jsonSongs);
 
-                  if (key == props.screenProps.currentVideoKey) {
+                  if (key == currentVideoKey) {
                     props.screenProps.playNextSong(null, true);
                   }
 
@@ -457,7 +529,7 @@ export default (props) => {
                       );
                     }
                     setSong(JSONified);
-                    props.screenProps.addToAllSongs(JSONified);
+                    changeAllSongs(JSONified);
                   });
                 });
               })
@@ -507,7 +579,7 @@ export default (props) => {
                               );
                               jsonSongs = JSON.stringify(jsonSongs);
 
-                              if (key == props.screenProps.currentVideoKey) {
+                              if (key == currentVideoKey) {
                                 props.screenProps.playNextSong(null, true);
                               }
 
@@ -563,31 +635,6 @@ export default (props) => {
       });
   };
 
-  // const createPlaylist = async () => {
-  //     try {
-  //         let {playlists} = this.state;
-  //         let playlistTitleExists = playlists.includes(text);
-  //         let self = this;
-
-  //         if(!playlistTitleExists) {
-  //             playlists.push(text);
-  //             playlists = JSON.stringify(playlists);
-
-  //             await AsyncStorage.setItem("Playlists", playlists)
-  //             .then(response => {
-  //                 self.setState({text: "", isModalActive: false})
-  //             })
-  //             .catch(error => console.log(error));
-  //         }
-  //         else {
-  //             //console.log("Ya existe")
-  //         }
-  //       }
-  //       catch(error) {
-  //         console.log(error);
-  //       }
-  // }
-
   // SET THE ORDER ARRAY WHEN DRAGGIN AND SORTIN'
   const setCurrentOrderFunc = (currentOrder) => {
     setCurrentOrder(currentOrder);
@@ -606,7 +653,6 @@ export default (props) => {
 
     //  Playlist reordering
     for (let i = 0; i < currentOrder.length; i++) {
-      console.log(songs);
       songs[Number(currentOrder[i])].playlistsIndex[key] = i;
       newOrderedArray.push(songs[Number(currentOrder[i])]);
     }
@@ -616,14 +662,13 @@ export default (props) => {
 
     //  new songs array and saving
     tempAllSongs = [...tempAllSongs, ...newOrderedArray];
-    props.screenProps.addToAllSongs(tempAllSongs);
+    changeAllSongs(tempAllSongs);
     AsyncStorage.setItem("Songs", JSON.stringify(tempAllSongs));
     loadSongs();
     if (props.screenProps.currentPlaylistName == key)
       props.screenProps.updatePlaylistAfterDownload();
     setIsEditingActive(false);
   };
-  console.log("propies", props);
   return (
     <PlaylistSongsContainer>
       {isEditModalActive && (
@@ -631,7 +676,7 @@ export default (props) => {
           loadSongs={loadSongs}
           item={currentItem}
           closeModal={closeEditModal}
-          addToAllSongs={props.screenProps.addToAllSongs}
+          addToAllSongs={changeAllSongs}
         />
       )}
       <HeaderContainer>
@@ -663,16 +708,18 @@ export default (props) => {
         <ScrollView style={{ width: "100%" }}>
           {songs.map((play, index) => (
             <ItemContainer
+              key={play.uri}
               index={index}
               title={play.title}
               totalSongs={songs.length - 1}
             >
               <PlayButton
-                currentVideoKey={props.screenProps.currentVideoKey}
+                currentVideoKey={currentVideoKey}
                 togglePause={togglePause}
                 playSong={playSong}
                 index={index}
                 play={play}
+                paused={paused}
               />
               <ItemData>
                 <ItemTitle
@@ -839,7 +886,7 @@ const ItemTitle = ({ play, downloadingVideoKey, children, pathName }) => {
           color:
             play.isDownloaded && play[pathName]
               ? "#ea4c89"
-              : downloadingVideoKey.includes(play.uri)
+              : songIsDownloading(downloadingVideoKey, play.uri)
               ? "orange"
               : "#444",
         },
@@ -853,6 +900,13 @@ const ItemTitle = ({ play, downloadingVideoKey, children, pathName }) => {
 };
 const ItemArtist = ({ children }) => {
   return <Text style={stylesPlaylistsSongs.itemArtist}>{children}</Text>;
+};
+
+const songIsDownloading = (downloadedSongs, uri) => {
+  if (downloadedSongs.filter((dS) => dS.uri === uri).length > 0) {
+    return true;
+  }
+  return false;
 };
 
 const stylesPlaylistsSongs = StyleSheet.create({
